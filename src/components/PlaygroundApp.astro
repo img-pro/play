@@ -6,15 +6,9 @@
   <!-- Header -->
   <header class="playground-header">
     <div class="header-content">
-      <!-- Left: Logo & Navigation -->
+      <!-- Left: Logo -->
       <div class="header-left">
         <button @click="activeView = 'endpoints'" class="logo">API Playground</button>
-
-        <nav class="header-nav">
-          <button @click="activeView = 'documentation'" :class="{'active': activeView === 'documentation'}" class="nav-tab">
-            Documentation
-          </button>
-        </nav>
       </div>
 
       <!-- Right: Actions -->
@@ -47,6 +41,13 @@
           </svg>
           <svg x-show="currentTheme === 'light'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <button @click="activeView = 'documentation'" class="header-btn" :class="{'active': activeView === 'documentation'}" title="Documentation">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
           </svg>
         </button>
 
@@ -614,7 +615,7 @@
   document.addEventListener('alpine:init', () => {
     Alpine.data('playgroundApp', () => ({
       // State
-      activeView: 'endpoints',
+      activeView: localStorage.getItem('img_api_token') ? 'endpoints' : 'documentation',
       selectedEndpoint: null,
       requestTab: 'request',
       endpointMode: localStorage.getItem('endpoint_mode') || 'production',
