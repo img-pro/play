@@ -243,10 +243,18 @@ import PlaygroundApp from '../components/PlaygroundApp.astro';
   /* Tabs */
   .tabs {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 0;
     background: var(--bg-tertiary);
     border-bottom: 1px solid var(--border-primary);
     padding: 0;
+  }
+
+  .tab-buttons {
+    display: flex;
+    flex: 1;
+    gap: 0;
   }
 
   .tab {
@@ -272,6 +280,55 @@ import PlaygroundApp from '../components/PlaygroundApp.astro';
     background: var(--bg-secondary);
     color: var(--text-primary);
     border-bottom-color: var(--color-info);
+  }
+
+  /* Run Button */
+  .btn-run {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    margin: 0.5rem;
+    background: var(--color-info);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    min-width: 110px;
+  }
+
+  .btn-run:hover:not(:disabled) {
+    background: var(--color-info);
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-run:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .btn-run:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-run svg {
+    flex-shrink: 0;
+  }
+
+  .spinner-sm {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
   }
 
   .tab-content {
@@ -535,21 +592,6 @@ import PlaygroundApp from '../components/PlaygroundApp.astro';
     margin-top: 0.5rem;
   }
 
-  /* Execute Section */
-  .execute-section {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.5rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-lg);
-    margin-bottom: 2rem;
-  }
-
-  .btn-execute {
-    min-width: 150px;
-  }
 
   /* Response Section */
   .response-section {

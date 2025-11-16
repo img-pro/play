@@ -3,18 +3,54 @@
 **Version:** 1.0
 **Base URL:** `https://api.img.pro`
 
-## Introduction
+## Quick Start
 
-The Img.pro API is a modern, edge-native image hosting API built on Cloudflare Workers. It provides fast, globally distributed image upload, storage, and delivery with automatic format optimization and responsive image variants.
+Welcome to the Img.pro API! This playground provides an interactive way to explore and test all API endpoints. Here's how to get started in 3 steps:
 
-**Key Features:**
-- **Edge-Native Processing** - Deployed to 300+ locations worldwide for sub-100ms latency
-- **Automatic Optimization** - Intelligent format conversion (HEIC/AVIF → WebP) and dimension constraints
-- **Responsive Images** - Automatic generation of multiple size variants (s, m, l, xl, xxl)
-- **Public & Private Media** - Fine-grained access control per image
-- **Ephemeral Images** - Time-limited images with automatic expiration
-- **Batch Operations** - Update or delete up to 100 items in a single request
-- **Cursor Pagination** - Efficient pagination for large media libraries
+### 1. Get Your API Token
+
+Visit your [API Keys page](https://img.pro/api-keys) to create a new API token. Copy the token immediately - it won't be shown again.
+
+### 2. Add Your Token
+
+Click the **🔑 Authentication** button in the top-right corner and paste your API token. It will be saved locally in your browser.
+
+### 3. Start Exploring
+
+Switch to the **Endpoints** tab to see all available endpoints. Each endpoint shows:
+- **Request tab** - Interactive form to fill in parameters
+- **cURL, JavaScript, Python, PHP tabs** - Live code examples that update as you type
+- **Execute button** - Test the endpoint and see real responses
+
+---
+
+## Using the Playground
+
+### Interactive Endpoints
+
+The **Endpoints** tab is your main workspace. Select any endpoint from the sidebar to:
+
+1. **Fill in parameters** - Use the Request tab to input values
+2. **See live code** - Switch to language tabs to see generated code
+3. **Copy & paste** - Click the copy button on any code example
+4. **Execute requests** - Test endpoints and inspect responses
+5. **View request details** - Debug by expanding "Request Details" in responses
+
+All code examples update in real-time as you change parameters. No need to manually construct requests!
+
+### Testing Workflow
+
+**For Quick Tests:**
+1. Select an endpoint (e.g., "GET /v1/media")
+2. Add your token (automatically included in code examples)
+3. Fill in any required parameters
+4. Click "Execute Request"
+
+**For Code Integration:**
+1. Set up your parameters in the Request tab
+2. Switch to your preferred language tab (cURL, JavaScript, Python, or PHP)
+3. Click "Copy" to grab the ready-to-use code
+4. Paste into your application
 
 ---
 
@@ -22,13 +58,7 @@ The Img.pro API is a modern, edge-native image hosting API built on Cloudflare W
 
 All API requests (except public media access) require authentication using Bearer tokens.
 
-### Getting Your API Token
-
-1. Visit your [API Keys page](https://img.pro/api-keys)
-2. Create a new API token with appropriate permissions
-3. Copy the token - it won't be shown again
-
-### Using Your Token
+### Token Format
 
 Include your token in the `Authorization` header:
 
@@ -36,31 +66,86 @@ Include your token in the `Authorization` header:
 Authorization: Bearer {your-token}
 ```
 
-**Token Formats:**
-
-The API supports two token formats:
+The API accepts two token formats:
 - **Sanctum format:** `{id}|{plainTextToken}` (e.g., `3|abc123def456`)
 - **Plain format:** `{plainTextToken}` (e.g., `abc123def456`)
 
-### Token Permissions
+### Token Privacy
 
-Tokens can have the following abilities:
-- `*` - Full access (all operations)
-- `read` - Read-only access (GET endpoints)
-- `write` - Write access (POST, PATCH, DELETE endpoints)
+Your token is sensitive! In the playground:
+- **Request tab** - Token is hidden by default (click 👁️ to show/hide)
+- **Code examples** - Token is visible so you can copy working code
+- **Storage** - Token is stored only in your browser's localStorage
 
 ### Optional Authentication
 
-The `GET /v1/media/{uid}` endpoint supports **optional authentication**:
+The `GET /v1/media/{uid}` endpoint supports optional authentication:
 - **Without auth:** Returns only public media
 - **With auth:** Returns both public and private media owned by your team
 
 ---
 
-## Endpoints Overview
+## Key Concepts
 
-| Method | Endpoint | Auth Required | Description |
-|--------|----------|---------------|-------------|
+### Media Ownership
+
+- Each media item belongs to a **team**
+- You can only access media owned by your team (unless it's public)
+- System admins (Team ID 1) can access all media
+
+### Public vs Private Media
+
+Control who can access your media:
+- **Public (`public: 1`)** - Anyone with the UID can access
+- **Private (`public: 0`)** - Only your team can access (requires auth)
+
+Set this when uploading/importing, or update it later with PATCH.
+
+### Ephemeral Images (TTL)
+
+Upload temporary images that auto-delete after a period:
+
+**TTL Format:** `{number}{unit}`
+- Units: `m` (minutes), `h` (hours), `d` (days)
+- Examples: `5m`, `2h`, `7d`, `30d`
+- Constraints: Min 5 minutes, Max 90 days
+- Default: No expiration (permanent)
+
+Try the `/v1/upload` endpoint with a `ttl` parameter to see it in action!
+
+### Pagination
+
+The API uses **cursor-based pagination** for efficient listing:
+
+- **`limit`** - Items per page (max 100, default 50)
+- **`cursor`** - Pagination cursor from previous response
+
+**Example workflow:**
+1. Request: `GET /v1/media?limit=50`
+2. Response includes: `next_cursor: "1704067200_123"`
+3. Next page: `GET /v1/media?limit=50&cursor=1704067200_123`
+
+Cursors are more efficient than offset pagination for large datasets.
+
+### Batch Operations
+
+Update or delete up to 100 media items in a single request:
+
+**Batch Update** - `PATCH /v1/media?ids=uid1,uid2,uid3`
+- Add tags: `tag_mode: "add"`
+- Remove tags: `tag_mode: "remove"`
+- Replace tags: `tag_mode: "replace"`
+
+**Batch Delete** - `DELETE /v1/media?ids=uid1,uid2,uid3`
+
+Try the batch endpoints in the playground to see the code examples!
+
+---
+
+## Available Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
 | GET | `/` | No | Service information |
 | POST | `/v1/upload` | Yes | Upload an image file |
 | POST | `/v1/import` | Yes | Import image from URL |
@@ -71,893 +156,146 @@ The `GET /v1/media/{uid}` endpoint supports **optional authentication**:
 | PATCH | `/v1/media?ids=` | Yes | Batch update multiple items |
 | DELETE | `/v1/media?ids=` | Yes | Batch delete multiple items |
 
----
-
-## Upload Image
-
-Upload an image file directly to Img.pro.
-
-### Endpoint
-
-```http
-POST /v1/upload
-```
-
-### Request
-
-**Headers:**
-- `Authorization: Bearer {token}` (required)
-- `Content-Type: multipart/form-data`
-
-**Body Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `file` | File | **Yes** | Image file to upload (max 100 MB) |
-| `description` | String | No | Description or caption for the image |
-| `tags` | String | No | Comma-separated tags (max 10 tags, 50 chars each) |
-| `ttl` | String | No | Time-to-live for ephemeral images (see TTL format below) |
-| `public` | String | No | Make publicly accessible: `"1"` or `"0"` (defaults to team preference) |
-
-**TTL Format:**
-
-Ephemeral images automatically expire after the specified time:
-- **Duration format:** `"5m"` (minutes), `"2h"` (hours), `"7d"` (days), `"2w"` (weeks)
-- **Seconds format:** `"3600"` (1 hour), `"86400"` (1 day)
-- **Minimum:** 5 minutes (300 seconds)
-- **Maximum:** 90 days (7,776,000 seconds)
-
-### Example Request
-
-```bash
-curl -X POST https://api.img.pro/v1/upload \
-  -H "Authorization: Bearer your-token" \
-  -F "file=@photo.jpg" \
-  -F "description=My awesome photo" \
-  -F "tags=vacation,beach,sunset" \
-  -F "ttl=7d" \
-  -F "public=1"
-```
-
-### Response
-
-**Status:** `201 Created`
-
-```json
-{
-  "id": "abc123",
-  "name": "photo.jpg",
-  "url": "https://img.pro/abc123",
-  "src": "https://cdn.img.pro/xyz/abc123.jpg",
-  "width": 1920,
-  "height": 1080,
-  "filesize": 245670,
-  "description": "My awesome photo",
-  "tags": ["vacation", "beach", "sunset"],
-  "expires_at": 1704067200
-}
-```
-
-**Response Fields:**
-
-- `id` - Unique identifier (UID) for the media
-- `name` - Original filename
-- `url` - Public sharing URL (only present if `public=1`)
-- `src` - CDN URL for the image (default size: large)
-- `width` - Image width in pixels (only when processing complete)
-- `height` - Image height in pixels (only when processing complete)
-- `filesize` - File size in bytes (only when processing complete)
-- `status` - Processing status: `"processing"` or `"failed"` (omitted when `"ready"`)
-- `description` - Image description (only if provided)
-- `tags` - Array of tags (only if provided)
-- `expires_at` - Unix timestamp when image expires (only for ephemeral images)
-- `sizes` - Object with size variants (only when generated by CDN)
-
-**Processing States:**
-
-Images may be in one of three states:
-1. **Ready** - Fully processed and available (no `status` field)
-2. **Processing** - Currently being processed (`status: "processing"`, no `src`, `width`, `height`, or `filesize`)
-3. **Failed** - Processing failed (`status: "failed"`, no `src`, `width`, `height`, or `filesize`)
-
----
-
-## Import from URL
-
-Import an image from a remote URL.
-
-### Endpoint
-
-```http
-POST /v1/import
-```
-
-### Request
-
-**Headers:**
-- `Authorization: Bearer {token}` (required)
-- `Content-Type: application/json`
-
-**Body Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `url` | String | **Yes** | URL of the image to import |
-| `description` | String | No | Description or caption |
-| `tags` | String | No | Comma-separated tags |
-| `ttl` | String | No | Time-to-live (see TTL format above) |
-| `public` | Boolean/Number | No | Make publicly accessible |
-
-### Example Request
-
-```bash
-curl -X POST https://api.img.pro/v1/import \
-  -H "Authorization: Bearer your-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://example.com/image.jpg",
-    "description": "Imported image",
-    "tags": "imported,example",
-    "public": true
-  }'
-```
-
-### Response
-
-Same as Upload endpoint (201 Created with media object).
-
-### Error Responses
-
-- `502 Bad Gateway` - Failed to fetch from URL (server returned error)
-- `504 Gateway Timeout` - URL fetch timed out (30 second limit)
-
----
-
-## List Media
-
-Retrieve a paginated list of your media items.
-
-### Endpoint
-
-```http
-GET /v1/media
-```
-
-### Request
-
-**Headers:**
-- `Authorization: Bearer {token}` (required)
-
-**Query Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `limit` | Number | 50 | Items per page (max 100) |
-| `cursor` | String | - | Pagination cursor from previous response |
-| `offset` | Number | 0 | Offset for legacy pagination (deprecated, use cursor) |
-| `ids` | String | - | Comma-separated UIDs to fetch specific items |
-| `tags` | String | - | Filter by tags (comma-separated) |
-| `tag_mode` | String | `"any"` | Tag matching mode: `"any"` or `"all"` |
-
-**Pagination:**
-
-The API supports two pagination methods:
-
-1. **Cursor-based (Recommended):** Use the `cursor` parameter with `next_cursor` from responses
-2. **Offset-based (Legacy):** Use the `offset` parameter (not recommended for large datasets)
-
-### Example Request
-
-```bash
-# List first 20 items
-curl "https://api.img.pro/v1/media?limit=20" \
-  -H "Authorization: Bearer your-token"
-
-# Get next page using cursor
-curl "https://api.img.pro/v1/media?limit=20&cursor=1704067200_123" \
-  -H "Authorization: Bearer your-token"
-
-# Fetch specific items
-curl "https://api.img.pro/v1/media?ids=abc123,def456,ghi789" \
-  -H "Authorization: Bearer your-token"
-
-# Filter by tags (match any)
-curl "https://api.img.pro/v1/media?tags=vacation,beach&tag_mode=any" \
-  -H "Authorization: Bearer your-token"
-
-# Filter by tags (match all)
-curl "https://api.img.pro/v1/media?tags=vacation,beach&tag_mode=all" \
-  -H "Authorization: Bearer your-token"
-```
-
-### Response
-
-**Status:** `200 OK`
-
-```json
-{
-  "data": [
-    {
-      "id": "abc123",
-      "name": "photo.jpg",
-      "src": "https://cdn.img.pro/xyz/abc123.jpg",
-      "width": 1920,
-      "height": 1080,
-      "filesize": 245670
-    }
-  ],
-  "next_cursor": "1704067200_124",
-  "has_more": true
-}
-```
-
-**Response Fields:**
-
-- `data` - Array of media objects
-- `next_cursor` - Cursor for the next page (only if more results exist)
-- `has_more` - Boolean indicating if more results are available
-
----
-
-## Get Single Media
-
-Retrieve details for a specific media item by UID.
-
-### Endpoint
-
-```http
-GET /v1/media/{uid}
-```
-
-### Authentication
-
-**Optional** - This endpoint works both with and without authentication:
-
-- **Without auth:** Returns only public media (`is_public=1`)
-- **With auth:** Returns both public and private media owned by your team
-
-### Example Request
-
-```bash
-# Public access (no auth)
-curl "https://api.img.pro/v1/media/abc123"
-
-# Authenticated access
-curl "https://api.img.pro/v1/media/abc123" \
-  -H "Authorization: Bearer your-token"
-```
-
-### Response
-
-**Status:** `200 OK`
-
-```json
-{
-  "id": "abc123",
-  "name": "photo.jpg",
-  "url": "https://img.pro/abc123",
-  "src": "https://cdn.img.pro/xyz/abc123.jpg",
-  "width": 1920,
-  "height": 1080,
-  "filesize": 245670,
-  "sizes": {
-    "s": {
-      "src": "https://cdn.img.pro/xyz/abc123.jpg?size=s",
-      "width": 320,
-      "height": 180,
-      "filesize": 12450
-    },
-    "m": {
-      "src": "https://cdn.img.pro/xyz/abc123.jpg?size=m",
-      "width": 640,
-      "height": 360,
-      "filesize": 35200
-    },
-    "l": {
-      "src": "https://cdn.img.pro/xyz/abc123.jpg?size=l",
-      "width": 1280,
-      "height": 720,
-      "filesize": 98500
-    }
-  }
-}
-```
-
-**Size Variants:**
-
-The `sizes` object is only present when variants have been generated by the CDN (after first request). Available sizes:
-
-- `s` - Small (max 320px)
-- `m` - Medium (max 640px)
-- `l` - Large (max 1280px)
-- `xl` - Extra Large (max 1920px)
-- `xxl` - Double Extra Large (max 2560px)
-
-### Error Response
-
-**Status:** `404 Not Found`
-
-```json
-{
-  "error": "Media not found"
-}
-```
-
----
-
-## Update Media
-
-Update metadata for a single media item.
-
-### Endpoint
-
-```http
-PATCH /v1/media/{uid}
-```
-
-### Request
-
-**Headers:**
-- `Authorization: Bearer {token}` (required)
-- `Content-Type: application/json`
-
-**Body Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `name` | String | No | Update filename |
-| `description` | String | No | Update description |
-| `tags` | String | No | Update tags (comma-separated, replaces existing) |
-| `public` | Boolean | No | Update public status |
-
-### Example Request
-
-```bash
-curl -X PATCH "https://api.img.pro/v1/media/abc123" \
-  -H "Authorization: Bearer your-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "description": "Updated description",
-    "tags": "updated,new-tags",
-    "public": true
-  }'
-```
-
-### Response
-
-**Status:** `200 OK`
-
-Returns the updated media object.
-
----
-
-## Batch Update
-
-Update multiple media items in a single request.
-
-### Endpoint
-
-```http
-PATCH /v1/media?ids={comma-separated-uids}
-```
-
-### Request
-
-**Headers:**
-- `Authorization: Bearer {token}` (required)
-- `Content-Type: application/json`
-
-**Query Parameters:**
-- `ids` - Comma-separated list of UIDs (max 100)
-
-**Body Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `name` | String | No | Update filename for all items |
-| `description` | String | No | Update description for all items |
-| `tags` | String/Array | No | Tags to add/remove/replace |
-| `tag_mode` | String | No | Tag operation: `"replace"` (default), `"add"`, or `"remove"` |
-| `public` | Boolean | No | Update public status for all items |
-
-**Tag Modes:**
-
-- `replace` - Replace all tags with provided tags (default)
-- `add` - Add provided tags to existing tags (creates union)
-- `remove` - Remove provided tags from existing tags
-
-### Example Request
-
-```bash
-# Replace tags for multiple items
-curl -X PATCH "https://api.img.pro/v1/media?ids=abc123,def456,ghi789" \
-  -H "Authorization: Bearer your-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "description": "Batch updated",
-    "tags": "batch,updated",
-    "tag_mode": "replace"
-  }'
-
-# Add tags to existing tags
-curl -X PATCH "https://api.img.pro/v1/media?ids=abc123,def456" \
-  -H "Authorization: Bearer your-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tags": "new-tag,another-tag",
-    "tag_mode": "add"
-  }'
-
-# Remove specific tags
-curl -X PATCH "https://api.img.pro/v1/media?ids=abc123,def456" \
-  -H "Authorization: Bearer your-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tags": "old-tag,deprecated",
-    "tag_mode": "remove"
-  }'
-```
-
-### Response
-
-**Status:** `200 OK`
-
-```json
-{
-  "updated": 3,
-  "media": [
-    {
-      "id": "abc123",
-      "name": "photo1.jpg",
-      "description": "Batch updated",
-      "tags": ["batch", "updated"]
-    },
-    {
-      "id": "def456",
-      "name": "photo2.jpg",
-      "description": "Batch updated",
-      "tags": ["batch", "updated"]
-    },
-    {
-      "id": "ghi789",
-      "name": "photo3.jpg",
-      "description": "Batch updated",
-      "tags": ["batch", "updated"]
-    }
-  ]
-}
-```
-
----
-
-## Delete Media
-
-Delete a single media item.
-
-### Endpoint
-
-```http
-DELETE /v1/media/{uid}
-```
-
-### Request
-
-**Headers:**
-- `Authorization: Bearer {token}` (required)
-
-### Example Request
-
-```bash
-curl -X DELETE "https://api.img.pro/v1/media/abc123" \
-  -H "Authorization: Bearer your-token"
-```
-
-### Response
-
-**Status:** `204 No Content`
-
-Empty response body.
-
----
-
-## Batch Delete
-
-Delete multiple media items in a single request.
-
-### Endpoint
-
-```http
-DELETE /v1/media?ids={comma-separated-uids}
-```
-
-### Request
-
-**Headers:**
-- `Authorization: Bearer {token}` (required)
-
-**Query Parameters:**
-- `ids` - Comma-separated list of UIDs (max 100)
-
-### Example Request
-
-```bash
-curl -X DELETE "https://api.img.pro/v1/media?ids=abc123,def456,ghi789" \
-  -H "Authorization: Bearer your-token"
-```
-
-### Response
-
-**Status:** `200 OK`
-
-```json
-{
-  "deleted": 2,
-  "not_found": 1,
-  "ids": {
-    "deleted": ["abc123", "def456"],
-    "not_found": ["ghi789"]
-  }
-}
-```
-
-**Response Fields:**
-
-- `deleted` - Number of successfully deleted items
-- `not_found` - Number of items not found
-- `ids.deleted` - Array of deleted UIDs
-- `ids.not_found` - Array of UIDs that were not found
-
----
-
-## Image Processing
-
-### Supported Formats
-
-**Input Formats:**
-
-The API accepts the following image formats:
-- **JPEG/JPG** - Stored as-is
-- **PNG** - Stored as-is (transparency preserved)
-- **GIF** - Stored as-is (animation preserved)
-- **WebP** - Stored as-is
-- **SVG** - Stored as-is (sanitized for security)
-- **HEIC/HEIF** - Converted to WebP
-- **AVIF** - Converted to WebP
-- **TIFF, BMP, and other formats** - Converted to WebP
-
-**Output Formats:**
-
-All images are optimized and served in modern web formats (JPEG, PNG, GIF, WebP, or SVG) with automatic format selection based on browser support.
-
-### Size Limits
-
-- **Maximum file size:** 100 MB
-- **Maximum dimensions:** 8,192 pixels per side
-- **Maximum megapixels:** 48 MP (e.g., 8000×6000 or 6928×6928)
-
-Images exceeding dimension or megapixel limits are automatically resized while preserving aspect ratio.
-
-### Processing Pipeline
-
-1. **Validation** - File format and size validation
-2. **Format Detection** - MIME type and magic bytes detection
-3. **Dimension Analysis** - Width and height extraction
-4. **Format Conversion** - Convert HEIC/AVIF to WebP if needed
-5. **Storage** - Store optimized image to R2
-6. **Variant Generation** - Create responsive size variants on-demand
-
-### Automatic Optimizations
-
-- **Format conversion** for modern codec support (HEIC → WebP)
-- **Dimension constraints** to prevent excessive file sizes
-- **Quality optimization** for web delivery
-- **Responsive variants** generated on first request
-- **SVG sanitization** for security
-
----
-
-## Error Handling
-
-The API uses standard HTTP status codes and returns errors in a consistent JSON format.
-
-### Error Response Format
-
-```json
-{
-  "error": "Error message",
-  "code": "ERROR_CODE"
-}
-```
-
-### HTTP Status Codes
-
-| Status | Description |
-|--------|-------------|
-| `200 OK` | Request successful |
-| `201 Created` | Resource created successfully |
-| `204 No Content` | Request successful, no content to return |
-| `400 Bad Request` | Invalid request parameters |
-| `401 Unauthorized` | Invalid or missing authentication token |
-| `403 Forbidden` | Quota exceeded or insufficient permissions |
-| `404 Not Found` | Resource not found |
-| `413 Payload Too Large` | File exceeds 100 MB limit |
-| `429 Too Many Requests` | Rate limit exceeded |
-| `500 Internal Server Error` | Server error |
-| `502 Bad Gateway` | Failed to fetch from external URL (import) |
-| `504 Gateway Timeout` | Request timeout |
-
-### Common Error Codes
-
-- `unauthorized` - Invalid or missing authentication
-- `forbidden` - Insufficient permissions
-- `quota_exceeded` - Monthly image quota exceeded
-- `not_found` - Resource not found
-- `upload_failed` - Upload processing failed
-- `import_failed` - Import from URL failed
-- `fetch_timeout` - URL fetch timed out (30 second limit)
-- `validation_error` - Invalid parameters
-
-### Validation Errors
-
-Validation errors return `400 Bad Request` with field-specific errors:
-
-```json
-{
-  "error": "Validation failed",
-  "errors": {
-    "file": ["File is required"],
-    "ttl": ["TTL must be at least 5 minutes (300 seconds)"],
-    "tags": ["Maximum 10 tags allowed"]
-  }
-}
-```
+**→ Go to the Endpoints tab to explore each endpoint with interactive forms and live code examples!**
 
 ---
 
 ## Rate Limits & Quotas
 
-### Rate Limiting
+**Rate Limits:**
+- 1000 requests per minute per team
+- Includes a burst allowance for occasional spikes
 
-Rate limits are enforced per API token:
-- **Burst limit:** 100 requests per minute
-- **Sustained limit:** 1,000 requests per hour
+**Storage Quotas:**
+- Based on your team's plan
+- Check your current usage at [img.pro/dashboard](https://img.pro/dashboard)
 
-Rate limit headers are included in responses:
-```http
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1704067200
+**File Size Limits:**
+- Maximum upload size: 100 MB per file
+- Automatic optimization for smaller files
+
+---
+
+## Response Format
+
+All API responses use JSON format:
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
 ```
 
-### Monthly Quotas
+**Error Response:**
+```json
+{
+  "error": "error_code",
+  "message": "Human readable error message"
+}
+```
 
-Image upload quotas are based on your team's plan:
+**Pagination Response:**
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "next_cursor": "1704067200_123",
+    "has_more": true
+  }
+}
+```
 
-| Plan | Images/Month | Storage |
-|------|--------------|---------|
-| Free | 1,000 | 1 GB |
-| Launch | 10,000 | 10 GB |
-| Growth | 100,000 | 100 GB |
-| Business | 1,000,000 | 1 TB |
+Test any endpoint to see real response structures!
 
-Quota information is available via your team dashboard. Uploads will fail with `403 Forbidden` when quota is exceeded.
+---
+
+## Image Variants
+
+Uploaded images automatically generate responsive variants:
+
+| Size | Max Dimension | Use Case |
+|------|---------------|----------|
+| `s` | 640px | Thumbnails |
+| `m` | 1024px | Mobile displays |
+| `l` | 1920px | Desktop displays |
+| `xl` | 2560px | Large screens |
+| `xxl` | 3840px | 4K displays |
+| `original` | No limit | Original file |
+
+**Access variants via URL:**
+```
+https://img.pro/{uid}/s
+https://img.pro/{uid}/m
+https://img.pro/{uid}/original
+```
+
+Upload an image using the `/v1/upload` endpoint to see the variants in the response!
+
+---
+
+## Error Codes
+
+Common error codes you might encounter:
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `unauthorized` | 401 | Missing or invalid API token |
+| `forbidden` | 403 | Token lacks required permissions |
+| `not_found` | 404 | Resource doesn't exist |
+| `validation_error` | 422 | Invalid input parameters |
+| `quota_exceeded` | 429 | Monthly storage quota exceeded |
+| `rate_limit_exceeded` | 429 | Too many requests |
+| `server_error` | 500 | Internal server error |
+
+**Debugging tip:** Enable "Request Details" in the response panel to inspect exactly what was sent.
 
 ---
 
 ## Best Practices
 
-### Performance
-
-1. **Use cursor pagination** instead of offset for large datasets
-2. **Batch operations** when updating/deleting multiple items
-3. **Cache responses** appropriately (media objects rarely change)
-4. **Use CDN URLs** directly for image delivery (don't proxy through your server)
-
 ### Security
+- **Never expose tokens** in client-side code
+- Use **environment variables** for tokens in production
+- Rotate tokens regularly from your [API Keys page](https://img.pro/api-keys)
 
-1. **Never expose tokens** in client-side code or public repositories
-2. **Use read-only tokens** for public-facing applications when possible
-3. **Rotate tokens regularly** and immediately revoke compromised tokens
-4. **Use HTTPS only** - tokens transmitted over HTTP can be intercepted
+### Performance
+- Use **cursor pagination** instead of offset for large lists
+- Request only the **fields you need**
+- Use **batch operations** when updating/deleting multiple items
+- Cache public media URLs (they don't change)
 
-### Image Optimization
-
-1. **Upload high-quality originals** - the API handles optimization
-2. **Use appropriate TTL** for temporary images to save storage
-3. **Tag images** for easy filtering and organization
-4. **Use responsive variants** (`sizes` object) for responsive images
-5. **Set `public=1`** only when necessary (public images are cached globally)
-
-### Error Handling
-
-1. **Check `status` field** in responses to handle processing/failed states
-2. **Implement retries** with exponential backoff for transient errors (5xx)
-3. **Handle 429 responses** by respecting rate limits
-4. **Validate inputs** client-side to reduce 400 errors
-
----
-
-## Code Examples
-
-### JavaScript/TypeScript
-
-```javascript
-// Upload image
-const formData = new FormData();
-formData.append('file', fileInput.files[0]);
-formData.append('description', 'My photo');
-formData.append('tags', 'example,demo');
-formData.append('public', '1');
-
-const response = await fetch('https://api.img.pro/v1/upload', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${apiToken}`
-  },
-  body: formData
-});
-
-const media = await response.json();
-console.log('Uploaded:', media.src);
-
-// List media with cursor pagination
-async function* listAllMedia(apiToken) {
-  let cursor = null;
-
-  while (true) {
-    const url = cursor
-      ? `https://api.img.pro/v1/media?limit=100&cursor=${cursor}`
-      : 'https://api.img.pro/v1/media?limit=100';
-
-    const response = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${apiToken}` }
-    });
-
-    const data = await response.json();
-    yield* data.data;
-
-    if (!data.has_more) break;
-    cursor = data.next_cursor;
-  }
-}
-
-// Use it
-for await (const media of listAllMedia(apiToken)) {
-  console.log(media.name);
-}
-```
-
-### Python
-
-```python
-import requests
-
-# Upload image
-files = {'file': open('photo.jpg', 'rb')}
-data = {
-    'description': 'My photo',
-    'tags': 'example,demo',
-    'public': '1'
-}
-headers = {'Authorization': f'Bearer {api_token}'}
-
-response = requests.post(
-    'https://api.img.pro/v1/upload',
-    files=files,
-    data=data,
-    headers=headers
-)
-
-media = response.json()
-print(f"Uploaded: {media['src']}")
-
-# List media with cursor pagination
-def list_all_media(api_token):
-    cursor = None
-
-    while True:
-        params = {'limit': 100}
-        if cursor:
-            params['cursor'] = cursor
-
-        response = requests.get(
-            'https://api.img.pro/v1/media',
-            params=params,
-            headers={'Authorization': f'Bearer {api_token}'}
-        )
-
-        data = response.json()
-        yield from data['data']
-
-        if not data['has_more']:
-            break
-        cursor = data['next_cursor']
-
-# Use it
-for media in list_all_media(api_token):
-    print(media['name'])
-```
-
-### PHP
-
-```php
-<?php
-
-// Upload image
-$ch = curl_init('https://api.img.pro/v1/upload');
-
-$file = new CURLFile('photo.jpg', 'image/jpeg', 'photo.jpg');
-$data = [
-    'file' => $file,
-    'description' => 'My photo',
-    'tags' => 'example,demo',
-    'public' => '1'
-];
-
-curl_setopt_array($ch, [
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => $data,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER => [
-        'Authorization: Bearer ' . $apiToken
-    ]
-]);
-
-$response = curl_exec($ch);
-$media = json_decode($response);
-echo "Uploaded: {$media->src}\n";
-
-curl_close($ch);
-
-// List media
-function listAllMedia($apiToken) {
-    $cursor = null;
-
-    while (true) {
-        $url = 'https://api.img.pro/v1/media?limit=100';
-        if ($cursor) {
-            $url .= '&cursor=' . urlencode($cursor);
-        }
-
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $apiToken
-            ]
-        ]);
-
-        $response = curl_exec($ch);
-        $data = json_decode($response);
-        curl_close($ch);
-
-        foreach ($data->data as $media) {
-            yield $media;
-        }
-
-        if (!$data->has_more) {
-            break;
-        }
-        $cursor = $data->next_cursor;
-    }
-}
-
-// Use it
-foreach (listAllMedia($apiToken) as $media) {
-    echo "{$media->name}\n";
-}
-```
+### Media Management
+- Add **descriptive tags** to make media searchable
+- Use **TTL for temporary images** to save storage quota
+- Set **appropriate public/private** flags for security
+- Use **batch delete** to clean up multiple items efficiently
 
 ---
 
 ## Support & Resources
 
-- **Dashboard:** [img.pro](https://img.pro)
-- **API Playground:** Test endpoints interactively
-- **Status Page:** Check API health and uptime
-- **Support:** Contact support for technical assistance
+- **API Status:** [status.img.pro](https://status.img.pro)
+- **Changelog:** [img.pro/changelog](https://img.pro/changelog)
+- **Support:** [support@img.pro](mailto:support@img.pro)
+- **GitHub Issues:** [github.com/img-pro/api](https://github.com/img-pro/api)
 
 ---
 
-**Last Updated:** 2025-11-16
-**API Version:** 1.0
+## Environments
+
+**Production (Default):**
+- Base URL: `https://api.img.pro`
+- Use this for all production applications
+
+**Development:**
+- Click the **Environment** button to set a custom API URL
+- Useful for testing against staging environments
+
+The playground automatically includes the correct base URL in all code examples!
+
+---
+
+**Ready to start?** Head to the **Endpoints** tab to explore the API with interactive examples. All the code you need is generated automatically as you fill in the forms!

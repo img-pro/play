@@ -103,11 +103,24 @@
               <!-- Request Builder -->
               <div class="request-builder">
                 <div class="tabs">
-                  <button @click="requestTab = 'request'" :class="{'active': requestTab === 'request'}" class="tab">Request</button>
-                  <button @click="requestTab = 'curl'" :class="{'active': requestTab === 'curl'}" class="tab">cURL</button>
-                  <button @click="requestTab = 'javascript'" :class="{'active': requestTab === 'javascript'}" class="tab">JavaScript</button>
-                  <button @click="requestTab = 'python'" :class="{'active': requestTab === 'python'}" class="tab">Python</button>
-                  <button @click="requestTab = 'php'" :class="{'active': requestTab === 'php'}" class="tab">PHP</button>
+                  <div class="tab-buttons">
+                    <button @click="requestTab = 'request'" :class="{'active': requestTab === 'request'}" class="tab">Request</button>
+                    <button @click="requestTab = 'curl'" :class="{'active': requestTab === 'curl'}" class="tab">cURL</button>
+                    <button @click="requestTab = 'javascript'" :class="{'active': requestTab === 'javascript'}" class="tab">JavaScript</button>
+                    <button @click="requestTab = 'python'" :class="{'active': requestTab === 'python'}" class="tab">Python</button>
+                    <button @click="requestTab = 'php'" :class="{'active': requestTab === 'php'}" class="tab">PHP</button>
+                  </div>
+                  <button
+                    @click="executeRequest"
+                    :disabled="isLoading"
+                    class="btn-run"
+                  >
+                    <svg x-show="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span x-show="isLoading" class="spinner-sm"></span>
+                    <span>Run</span>
+                  </button>
                 </div>
 
                 <!-- Request Tab -->
@@ -254,21 +267,6 @@
                     <pre><code class="language-php" x-text="generatePHP()"></code></pre>
                   </div>
                 </div>
-              </div>
-
-              <!-- Execute Button -->
-              <div class="execute-section">
-                <button
-                  @click="executeRequest"
-                  :disabled="isLoading"
-                  class="btn btn-primary btn-execute"
-                >
-                  <span x-show="!isLoading">Execute Request</span>
-                  <span x-show="isLoading" class="loading-text">
-                    <span class="spinner"></span>
-                    Executing...
-                  </span>
-                </button>
               </div>
 
               <!-- Response Section -->
