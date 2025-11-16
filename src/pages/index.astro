@@ -1,13 +1,7 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Header from '../components/Header.astro';
-import ApiPlayground from '../components/ApiPlayground.astro';
+// Redirect to the playground page
 ---
 
-<Layout title="Img.pro - API Playground">
-  <Header appName="img.pro/playground" />
-
-  <main class="max-w-7xl mx-auto px-6 py-8">
-    <ApiPlayground />
-  </main>
-</Layout>
+<script>
+  window.location.href = '/playground';
+</script>

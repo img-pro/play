@@ -1,0 +1,255 @@
+---
+export interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Img.pro API Playground - Test and explore the image hosting API' } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content={description} />
+  <title>{title}</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- Preload fonts for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+  <div id="app">
+    <slot />
+  </div>
+
+  <script>
+    // Theme Management
+    (function() {
+      const stored = localStorage.getItem('theme');
+      const system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const theme = stored || system;
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <script>
+    import Alpine from 'alpinejs';
+    import Prism from 'prismjs';
+    import 'prismjs/components/prism-json';
+    import 'prismjs/components/prism-bash';
+    import 'prismjs/components/prism-javascript';
+    import 'prismjs/components/prism-typescript';
+    import 'prismjs/components/prism-python';
+    import 'prismjs/components/prism-php';
+    import 'prismjs/components/prism-go';
+    import 'prismjs/components/prism-rust';
+    import 'prismjs/components/prism-swift';
+
+    // Initialize Alpine
+    window.Alpine = Alpine;
+    window.Prism = Prism;
+
+    // Theme Store
+    Alpine.store('theme', {
+      current: 'system',
+      init() {
+        const stored = localStorage.getItem('theme');
+        this.current = stored || 'system';
+        this.apply();
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+          if (this.current === 'system') {
+            this.apply();
+          }
+        });
+      },
+      set(theme) {
+        this.current = theme;
+        if (theme === 'system') {
+          localStorage.removeItem('theme');
+        } else {
+          localStorage.setItem('theme', theme);
+        }
+        this.apply();
+      },
+      apply() {
+        const actualTheme = this.current === 'system'
+          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : this.current;
+        document.documentElement.setAttribute('data-theme', actualTheme);
+      },
+      toggle() {
+        const current = document.documentElement.getAttribute('data-theme');
+        this.set(current === 'dark' ? 'light' : 'dark');
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Cmd/Ctrl + K for search/command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        Alpine.store('commandPalette')?.toggle();
+      }
+
+      // Cmd/Ctrl + Shift + L for theme toggle
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'L') {
+        e.preventDefault();
+        Alpine.store('theme').toggle();
+      }
+
+      // Cmd/Ctrl + Enter to execute request
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        document.dispatchEvent(new CustomEvent('execute-request'));
+      }
+    });
+
+    Alpine.start();
+  </script>
+
+  <style is:global>
+    /* Import design system */
+    @import '/src/styles/design-system.css';
+
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-primary);
+    }
+
+    /* Custom Prism Theme */
+    pre[class*="language-"],
+    code[class*="language-"] {
+      color: var(--text-primary);
+      background: none;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      text-align: left;
+      white-space: pre;
+      word-spacing: normal;
+      word-break: normal;
+      word-wrap: normal;
+      line-height: 1.5;
+      tab-size: 2;
+      hyphens: none;
+    }
+
+    pre[class*="language-"] {
+      padding: 1rem;
+      margin: 0;
+      overflow: auto;
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-md);
+    }
+
+    :not(pre) > code[class*="language-"] {
+      padding: 0.1em 0.3em;
+      border-radius: 0.3em;
+      white-space: normal;
+      background: var(--bg-tertiary);
+    }
+
+    .token.comment,
+    .token.prolog,
+    .token.doctype,
+    .token.cdata {
+      color: var(--text-tertiary);
+    }
+
+    .token.punctuation {
+      color: var(--text-secondary);
+    }
+
+    .token.namespace {
+      opacity: 0.7;
+    }
+
+    .token.property,
+    .token.tag,
+    .token.boolean,
+    .token.number,
+    .token.constant,
+    .token.symbol,
+    .token.deleted {
+      color: var(--color-error);
+    }
+
+    .token.selector,
+    .token.attr-name,
+    .token.string,
+    .token.char,
+    .token.builtin,
+    .token.inserted {
+      color: var(--color-success);
+    }
+
+    .token.operator,
+    .token.entity,
+    .token.url,
+    .language-css .token.string,
+    .style .token.string {
+      color: var(--color-warning);
+    }
+
+    .token.atrule,
+    .token.attr-value,
+    .token.keyword {
+      color: var(--color-info);
+    }
+
+    .token.function,
+    .token.class-name {
+      color: var(--method-patch);
+    }
+
+    .token.regex,
+    .token.important,
+    .token.variable {
+      color: var(--method-post);
+    }
+
+    /* Line numbers */
+    pre[class*="language-"].line-numbers {
+      position: relative;
+      padding-left: 3.8em;
+      counter-reset: linenumber;
+    }
+
+    pre[class*="language-"].line-numbers > code {
+      position: relative;
+      white-space: inherit;
+    }
+
+    .line-numbers .line-numbers-rows {
+      position: absolute;
+      pointer-events: none;
+      top: 0;
+      font-size: 100%;
+      left: -3.8em;
+      width: 3em;
+      letter-spacing: -1px;
+      border-right: 1px solid var(--border-primary);
+      user-select: none;
+    }
+
+    .line-numbers-rows > span {
+      display: block;
+      counter-increment: linenumber;
+    }
+
+    .line-numbers-rows > span:before {
+      content: counter(linenumber);
+      color: var(--text-tertiary);
+      display: block;
+      padding-right: 0.8em;
+      text-align: right;
+    }
+  </style>
+</body>
+</html>

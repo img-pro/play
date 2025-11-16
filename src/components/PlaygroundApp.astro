@@ -1,0 +1,1431 @@
+---
+// Playground App Component - Main interactive playground
+---
+
+<div x-data="playgroundApp" class="playground-container">
+  <!-- Header -->
+  <header class="playground-header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="logo">
+          <span class="logo-icon">▣</span>
+          Img.pro API
+        </h1>
+        <span class="version">v1.0</span>
+      </div>
+
+      <nav class="header-nav">
+        <button @click="activeView = 'endpoints'" :class="{'active': activeView === 'endpoints'}" class="nav-btn">
+          Endpoints
+        </button>
+        <button @click="activeView = 'documentation'" :class="{'active': activeView === 'documentation'}" class="nav-btn">
+          Documentation
+        </button>
+        <button @click="activeView = 'examples'" :class="{'active': activeView === 'examples'}" class="nav-btn">
+          Examples
+        </button>
+        <button @click="activeView = 'history'" :class="{'active': activeView === 'history'}" class="nav-btn">
+          History
+        </button>
+      </nav>
+
+      <div class="header-right">
+        <button @click="showAuthModal = true" class="btn btn-ghost btn-icon" :class="{'authenticated': isAuthenticated}">
+          <svg x-show="!isAuthenticated" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z"></path>
+            <path d="M2 17L12 22L22 17"></path>
+            <path d="M2 12L12 17L22 12"></path>
+          </svg>
+          <svg x-show="isAuthenticated" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </button>
+
+        <button @click="showEnvironmentModal = true" class="btn btn-ghost">
+          <span x-text="environment === 'production' ? 'Production' : 'Development'"></span>
+        </button>
+
+        <button @click="$store.theme.toggle()" class="btn btn-ghost btn-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="playground-main">
+    <!-- Endpoints View -->
+    <div x-show="activeView === 'endpoints'" class="view-container">
+      <div class="endpoints-grid">
+        <!-- Sidebar -->
+        <aside class="endpoints-sidebar">
+          <div class="sidebar-section">
+            <h3 class="sidebar-title">Endpoints</h3>
+            <div class="endpoint-list">
+              <template x-for="endpoint in endpoints" :key="endpoint.id">
+                <button
+                  @click="selectEndpoint(endpoint)"
+                  :class="{'active': selectedEndpoint?.id === endpoint.id}"
+                  class="endpoint-item"
+                >
+                  <span class="method-badge" :class="'method-' + endpoint.method.toLowerCase()" x-text="endpoint.method"></span>
+                  <span class="endpoint-path" x-text="endpoint.path"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="endpoint-content">
+          <template x-if="selectedEndpoint">
+            <div class="endpoint-detail">
+              <!-- Endpoint Header -->
+              <div class="endpoint-header">
+                <div class="endpoint-title">
+                  <span class="method-badge" :class="'method-' + selectedEndpoint.method.toLowerCase()" x-text="selectedEndpoint.method"></span>
+                  <h2 x-text="selectedEndpoint.path"></h2>
+                </div>
+                <p class="endpoint-description" x-text="selectedEndpoint.description"></p>
+              </div>
+
+              <!-- Request Builder -->
+              <div class="request-builder">
+                <div class="tabs">
+                  <button @click="requestTab = 'request'" :class="{'active': requestTab === 'request'}" class="tab">Request</button>
+                  <button @click="requestTab = 'curl'" :class="{'active': requestTab === 'curl'}" class="tab">cURL</button>
+                  <button @click="requestTab = 'javascript'" :class="{'active': requestTab === 'javascript'}" class="tab">JavaScript</button>
+                  <button @click="requestTab = 'python'" :class="{'active': requestTab === 'python'}" class="tab">Python</button>
+                  <button @click="requestTab = 'php'" :class="{'active': requestTab === 'php'}" class="tab">PHP</button>
+                </div>
+
+                <!-- Request Tab -->
+                <div x-show="requestTab === 'request'" class="tab-content">
+                  <div class="request-form">
+                    <!-- Auth Token (if required) -->
+                    <div x-show="selectedEndpoint.requiresAuth || selectedEndpoint.optionalAuth" class="param-row auth-row">
+                      <label class="param-label">
+                        <span>Authorization</span>
+                        <span x-show="selectedEndpoint.requiresAuth" class="required">*</span>
+                        <span class="param-type">header</span>
+                      </label>
+                      <div class="param-input-group">
+                        <div class="input-with-icon">
+                          <input
+                            :type="showToken ? 'text' : 'password'"
+                            x-model="token"
+                            @input="saveToken"
+                            class="input"
+                            placeholder="your-api-token"
+                            :required="selectedEndpoint.requiresAuth"
+                          >
+                          <button @click="showToken = !showToken" type="button" class="input-icon-btn" :title="showToken ? 'Hide token' : 'Show token'">
+                            <svg x-show="!showToken" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg x-show="showToken" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                              <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                          </button>
+                        </div>
+                        <p class="param-description">Bearer token for authentication</p>
+                      </div>
+                    </div>
+
+                    <!-- All Parameters -->
+                    <template x-for="param in selectedEndpoint.parameters" :key="param.name">
+                      <div class="param-row">
+                        <label class="param-label">
+                          <span x-text="param.name"></span>
+                          <span x-show="param.required" class="required">*</span>
+                          <span class="param-type" x-text="param.location"></span>
+                        </label>
+                        <div class="param-input-group">
+                          <!-- File input -->
+                          <template x-if="param.type === 'file'">
+                            <div class="file-input-wrapper">
+                              <input
+                                type="file"
+                                @change="handleFileSelect($event, param.name)"
+                                class="file-input"
+                                :required="param.required"
+                                accept="image/*"
+                              >
+                              <div class="file-input-display">
+                                <span x-text="requestParams[param.name]?.name || 'Choose a file...'" class="file-name"></span>
+                                <button type="button" class="btn btn-secondary btn-sm">Browse</button>
+                              </div>
+                            </div>
+                          </template>
+                          <!-- Regular input -->
+                          <template x-if="param.type !== 'file'">
+                            <input
+                              :type="param.type === 'number' ? 'number' : 'text'"
+                              x-model="requestParams[param.name]"
+                              class="input"
+                              :placeholder="param.placeholder"
+                              :required="param.required"
+                            >
+                          </template>
+                          <p class="param-description" x-text="param.description"></p>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- cURL Tab -->
+                <div x-show="requestTab === 'curl'" class="tab-content">
+                  <div class="code-example">
+                    <button @click="copyCode(generateCurl(), 'curl')" class="copy-btn" :class="{'copied': copiedCode === 'curl'}">
+                      <svg x-show="copiedCode !== 'curl'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <svg x-show="copiedCode === 'curl'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      <span x-text="copiedCode === 'curl' ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                    <pre><code class="language-bash" x-text="generateCurl()"></code></pre>
+                  </div>
+                </div>
+
+                <!-- JavaScript Tab -->
+                <div x-show="requestTab === 'javascript'" class="tab-content">
+                  <div class="code-example">
+                    <button @click="copyCode(generateJavaScript(), 'javascript')" class="copy-btn" :class="{'copied': copiedCode === 'javascript'}">
+                      <svg x-show="copiedCode !== 'javascript'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <svg x-show="copiedCode === 'javascript'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      <span x-text="copiedCode === 'javascript' ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                    <pre><code class="language-javascript" x-text="generateJavaScript()"></code></pre>
+                  </div>
+                </div>
+
+                <!-- Python Tab -->
+                <div x-show="requestTab === 'python'" class="tab-content">
+                  <div class="code-example">
+                    <button @click="copyCode(generatePython(), 'python')" class="copy-btn" :class="{'copied': copiedCode === 'python'}">
+                      <svg x-show="copiedCode !== 'python'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <svg x-show="copiedCode === 'python'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      <span x-text="copiedCode === 'python' ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                    <pre><code class="language-python" x-text="generatePython()"></code></pre>
+                  </div>
+                </div>
+
+                <!-- PHP Tab -->
+                <div x-show="requestTab === 'php'" class="tab-content">
+                  <div class="code-example">
+                    <button @click="copyCode(generatePHP(), 'php')" class="copy-btn" :class="{'copied': copiedCode === 'php'}">
+                      <svg x-show="copiedCode !== 'php'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <svg x-show="copiedCode === 'php'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      <span x-text="copiedCode === 'php' ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                    <pre><code class="language-php" x-text="generatePHP()"></code></pre>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Execute Button -->
+              <div class="execute-section">
+                <button
+                  @click="executeRequest"
+                  :disabled="isLoading"
+                  class="btn btn-primary btn-execute"
+                >
+                  <span x-show="!isLoading">Execute Request</span>
+                  <span x-show="isLoading" class="loading-text">
+                    <span class="spinner"></span>
+                    Executing...
+                  </span>
+                </button>
+              </div>
+
+              <!-- Response Section -->
+              <div x-show="response" class="response-section">
+                <div class="response-header">
+                  <h3>Response</h3>
+                  <div class="response-meta">
+                    <span class="response-status" :class="'status-' + getStatusClass(response?.status)">
+                      <span x-text="response?.status"></span>
+                      <span x-text="response?.statusText"></span>
+                    </span>
+                    <span class="response-time" x-text="(response?.time || 0) + 'ms'"></span>
+                  </div>
+                </div>
+
+                <!-- Request Details (for debugging) -->
+                <details x-show="response?.request" class="request-details">
+                  <summary>Request Details</summary>
+                  <div class="request-info">
+                    <div class="info-row">
+                      <span class="info-label">URL:</span>
+                      <code x-text="response?.request?.url"></code>
+                    </div>
+                    <div class="info-row">
+                      <span class="info-label">Method:</span>
+                      <code x-text="response?.request?.method"></code>
+                    </div>
+                    <div class="info-row">
+                      <span class="info-label">Headers:</span>
+                      <pre class="info-code"><code x-text="JSON.stringify(response?.request?.headers || {}, null, 2)"></code></pre>
+                    </div>
+                    <div class="info-row">
+                      <span class="info-label">Body Type:</span>
+                      <code x-text="response?.request?.bodyType || 'none'"></code>
+                    </div>
+                  </div>
+                </details>
+
+                <div class="response-body">
+                  <pre class="code-block"><code x-text="formatResponseBody(response?.body)"></code></pre>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Empty State -->
+          <template x-if="!selectedEndpoint">
+            <div class="empty-state">
+              <h3>Select an endpoint to get started</h3>
+              <p>Choose from the available endpoints on the left to begin testing the API</p>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documentation View -->
+    <div x-show="activeView === 'documentation'" class="view-container">
+      <div class="documentation" x-data="documentationViewer">
+        <div x-show="loading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading documentation...</p>
+        </div>
+        <div x-show="!loading && error" class="error-state">
+          <p x-text="error"></p>
+        </div>
+        <div x-show="!loading && !error" class="documentation-content" x-html="renderedDocs"></div>
+      </div>
+    </div>
+
+    <!-- Examples View -->
+    <div x-show="activeView === 'examples'" class="view-container">
+      <div class="examples">
+        <h1>Code Examples</h1>
+        <p>Example code for common use cases</p>
+      </div>
+    </div>
+
+    <!-- History View -->
+    <div x-show="activeView === 'history'" class="view-container">
+      <div class="history">
+        <div class="history-header">
+          <h2>Request History</h2>
+          <button @click="clearHistory" class="btn btn-ghost">Clear All</button>
+        </div>
+        <div class="history-list">
+          <template x-for="item in requestHistory" :key="item.id">
+            <div class="history-item" @click="loadFromHistory(item)">
+              <div class="history-method">
+                <span class="method-badge" :class="'method-' + item.method.toLowerCase()" x-text="item.method"></span>
+              </div>
+              <div class="history-details">
+                <p class="history-path" x-text="item.path"></p>
+                <p class="history-timestamp" x-text="formatTimestamp(item.timestamp)"></p>
+              </div>
+              <div class="history-status">
+                <span :class="'status-' + getStatusClass(item.status)" x-text="item.status"></span>
+              </div>
+            </div>
+          </template>
+          <div x-show="requestHistory.length === 0" class="empty-history">
+            <p>No requests in history</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Auth Modal -->
+  <div x-show="showAuthModal" x-cloak class="modal" @click.self="showAuthModal = false">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Authentication</h2>
+        <button @click="showAuthModal = false" class="btn btn-ghost btn-icon">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="label">API Token</label>
+          <input
+            type="password"
+            x-model="token"
+            class="input"
+            placeholder="Enter your API token"
+            @keyup.enter="saveToken"
+          >
+          <p class="help-text">Your token is stored locally and never sent to our servers</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button @click="showAuthModal = false" class="btn btn-secondary">Cancel</button>
+        <button @click="saveToken" class="btn btn-primary">Save Token</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Environment Modal -->
+  <div x-show="showEnvironmentModal" x-cloak class="modal" @click.self="showEnvironmentModal = false">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Environment Settings</h2>
+        <button @click="showEnvironmentModal = false" class="btn btn-ghost btn-icon">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="environment-options">
+          <label class="radio-card">
+            <input type="radio" x-model="environment" value="production">
+            <div class="radio-card-content">
+              <h3>Production</h3>
+              <p>https://api.img.pro</p>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" x-model="environment" value="custom" @click="$nextTick(() => $refs.customUrlInput.focus())">
+            <div class="radio-card-content">
+              <h3>Development</h3>
+              <input
+                x-ref="customUrlInput"
+                type="text"
+                x-model="customApiUrl"
+                class="input"
+                placeholder="https://test.api.img.pro"
+                @keyup.enter="showEnvironmentModal = false; applyEnvironment()"
+                @click.stop="environment = 'custom'"
+                style="margin-top: 0.5rem; font-size: 0.875rem;"
+              >
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button @click="showEnvironmentModal = false; applyEnvironment()" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Playground App Alpine Component
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('playgroundApp', () => ({
+      // State
+      activeView: 'endpoints',
+      selectedEndpoint: null,
+      requestTab: 'request',
+      environment: localStorage.getItem('environment') || 'production',
+      customApiUrl: localStorage.getItem('custom_api_url') || 'https://test.api.img.pro',
+      token: localStorage.getItem('img_api_token') || '',
+      isAuthenticated: false,
+      isLoading: false,
+      response: null,
+      showToken: false,
+      lastRequest: null,
+
+      // Modals
+      showAuthModal: false,
+      showEnvironmentModal: false,
+
+      // Request Data
+      requestParams: {},
+
+      // History
+      requestHistory: JSON.parse(localStorage.getItem('request_history') || '[]'),
+
+      // Clipboard
+      copiedCode: null,
+
+      // Endpoints
+      endpoints: [
+        {
+          id: 'get-root',
+          method: 'GET',
+          path: '/',
+          description: 'Get service information and available endpoints',
+          requiresAuth: false,
+          parameters: []
+        },
+        {
+          id: 'upload',
+          method: 'POST',
+          path: '/v1/upload',
+          description: 'Upload an image file',
+          requiresAuth: true,
+          parameters: [
+            {
+              name: 'file',
+              type: 'file',
+              location: 'body',
+              required: true,
+              placeholder: '',
+              description: 'Image file to upload (max 100 MB)'
+            },
+            {
+              name: 'description',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'My awesome photo',
+              description: 'Description or caption'
+            },
+            {
+              name: 'tags',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'vacation,beach,sunset',
+              description: 'Comma-separated tags (max 10)'
+            },
+            {
+              name: 'ttl',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: '7d',
+              description: 'Time-to-live: 5m, 2h, 7d (min 5m, max 90d)'
+            },
+            {
+              name: 'public',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: '1',
+              description: 'Make publicly accessible: 1 or 0'
+            }
+          ]
+        },
+        {
+          id: 'import',
+          method: 'POST',
+          path: '/v1/import',
+          description: 'Import an image from a URL',
+          requiresAuth: true,
+          parameters: [
+            {
+              name: 'url',
+              type: 'text',
+              location: 'body',
+              required: true,
+              placeholder: 'https://example.com/image.jpg',
+              description: 'URL of the image to import'
+            },
+            {
+              name: 'description',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'Imported image',
+              description: 'Description or caption'
+            },
+            {
+              name: 'tags',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'imported,example',
+              description: 'Comma-separated tags'
+            },
+            {
+              name: 'ttl',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: '7d',
+              description: 'Time-to-live'
+            },
+            {
+              name: 'public',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'true',
+              description: 'Make publicly accessible'
+            }
+          ]
+        },
+        {
+          id: 'list-media',
+          method: 'GET',
+          path: '/v1/media',
+          description: 'List media items with pagination and filtering',
+          requiresAuth: true,
+          parameters: [
+            {
+              name: 'limit',
+              type: 'number',
+              location: 'query',
+              required: false,
+              placeholder: '50',
+              description: 'Items per page (max 100)'
+            },
+            {
+              name: 'cursor',
+              type: 'text',
+              location: 'query',
+              required: false,
+              placeholder: '1704067200_123',
+              description: 'Pagination cursor'
+            },
+            {
+              name: 'offset',
+              type: 'number',
+              location: 'query',
+              required: false,
+              placeholder: '0',
+              description: 'Offset pagination (deprecated)'
+            },
+            {
+              name: 'ids',
+              type: 'text',
+              location: 'query',
+              required: false,
+              placeholder: 'abc123,def456',
+              description: 'Fetch specific items'
+            },
+            {
+              name: 'tags',
+              type: 'text',
+              location: 'query',
+              required: false,
+              placeholder: 'vacation,beach',
+              description: 'Filter by tags'
+            },
+            {
+              name: 'tag_mode',
+              type: 'text',
+              location: 'query',
+              required: false,
+              placeholder: 'any',
+              description: 'Tag matching: any or all'
+            }
+          ]
+        },
+        {
+          id: 'get-media',
+          method: 'GET',
+          path: '/v1/media/{id}',
+          description: 'Get a specific media item',
+          requiresAuth: false,
+          optionalAuth: true,
+          parameters: [
+            {
+              name: 'id',
+              type: 'text',
+              location: 'path',
+              required: true,
+              placeholder: 'abc123',
+              description: 'Media UID'
+            }
+          ]
+        },
+        {
+          id: 'update-media',
+          method: 'PATCH',
+          path: '/v1/media/{id}',
+          description: 'Update metadata for a single media item',
+          requiresAuth: true,
+          parameters: [
+            {
+              name: 'id',
+              type: 'text',
+              location: 'path',
+              required: true,
+              placeholder: 'abc123',
+              description: 'Media UID'
+            },
+            {
+              name: 'name',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'updated-filename.jpg',
+              description: 'Update filename'
+            },
+            {
+              name: 'description',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'Updated description',
+              description: 'Update description'
+            },
+            {
+              name: 'tags',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'updated,new-tags',
+              description: 'Update tags (replaces existing)'
+            },
+            {
+              name: 'public',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'true',
+              description: 'Update public status'
+            }
+          ]
+        },
+        {
+          id: 'delete-media',
+          method: 'DELETE',
+          path: '/v1/media/{id}',
+          description: 'Delete a media item',
+          requiresAuth: true,
+          parameters: [
+            {
+              name: 'id',
+              type: 'text',
+              location: 'path',
+              required: true,
+              placeholder: 'abc123',
+              description: 'Media UID to delete'
+            }
+          ]
+        },
+        {
+          id: 'batch-update',
+          method: 'PATCH',
+          path: '/v1/media',
+          description: 'Update multiple media items (max 100)',
+          requiresAuth: true,
+          parameters: [
+            {
+              name: 'ids',
+              type: 'text',
+              location: 'query',
+              required: true,
+              placeholder: 'abc123,def456,ghi789',
+              description: 'Comma-separated UIDs (max 100)'
+            },
+            {
+              name: 'name',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'batch-updated.jpg',
+              description: 'Update filename for all'
+            },
+            {
+              name: 'description',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'Batch updated',
+              description: 'Update description for all'
+            },
+            {
+              name: 'tags',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'batch,updated',
+              description: 'Tags to add/remove/replace'
+            },
+            {
+              name: 'tag_mode',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'replace',
+              description: 'Tag operation: replace, add, remove'
+            },
+            {
+              name: 'public',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'true',
+              description: 'Update public status for all'
+            }
+          ]
+        },
+        {
+          id: 'batch-delete',
+          method: 'DELETE',
+          path: '/v1/media',
+          description: 'Delete multiple media items',
+          requiresAuth: true,
+          parameters: [
+            {
+              name: 'ids',
+              type: 'text',
+              location: 'query',
+              required: true,
+              placeholder: 'abc123,def456,ghi789',
+              description: 'Comma-separated UIDs to delete'
+            }
+          ]
+        }
+      ],
+
+      // Initialize
+      init() {
+        this.loadAuth();
+        this.selectEndpoint(this.endpoints[0]);
+
+        // Watch for tab changes to trigger syntax highlighting
+        this.$watch('requestTab', () => {
+          this.$nextTick(() => {
+            document.querySelectorAll('.code-example pre code').forEach((block) => {
+              if (window.Prism) {
+                window.Prism.highlightElement(block);
+              }
+            });
+          });
+        });
+      },
+
+      // Auth Management
+      loadAuth() {
+        const token = localStorage.getItem('img_api_token');
+        if (token) {
+          this.token = token;
+          this.isAuthenticated = true;
+        }
+      },
+
+      saveToken() {
+        if (this.token) {
+          localStorage.setItem('img_api_token', this.token);
+          this.isAuthenticated = true;
+        } else {
+          localStorage.removeItem('img_api_token');
+          this.isAuthenticated = false;
+        }
+        this.showAuthModal = false;
+      },
+
+      // Environment
+      applyEnvironment() {
+        localStorage.setItem('environment', this.environment);
+        if (this.environment === 'custom') {
+          localStorage.setItem('custom_api_url', this.customApiUrl);
+        }
+      },
+
+      getApiUrl() {
+        if (this.environment === 'production') {
+          return 'https://api.img.pro';
+        } else if (this.environment === 'custom') {
+          // Remove trailing slash if present
+          return this.customApiUrl.replace(/\/$/, '');
+        }
+        // Fallback (shouldn't happen)
+        return 'https://api.img.pro';
+      },
+
+      // Endpoint Selection
+      selectEndpoint(endpoint) {
+        this.selectedEndpoint = endpoint;
+        this.requestParams = {};
+        this.response = null;
+        this.requestTab = 'request';
+      },
+
+
+      // File Handling
+      handleFileSelect(event, paramName) {
+        const file = event.target.files[0];
+        if (file) {
+          this.requestParams[paramName] = file;
+        }
+      },
+
+      // Request Execution
+      async executeRequest() {
+        this.isLoading = true;
+        this.response = null;
+
+        try {
+          const url = this.buildUrl();
+          const options = this.buildRequestOptions();
+
+          // Debug logging
+          console.log('[Playground] Request URL:', url);
+          console.log('[Playground] Request method:', options.method);
+          console.log('[Playground] Request headers:', options.headers);
+          console.log('[Playground] Has body:', !!options.body);
+          if (this.token) {
+            console.log('[Playground] Token length:', this.token.length);
+            console.log('[Playground] Token format:', this.token.includes('|') ? 'ID|token' : 'plain');
+          }
+
+          // Store request details for debugging
+          this.lastRequest = {
+            url: url,
+            method: options.method,
+            headers: options.headers,
+            hasBody: !!options.body,
+            bodyType: options.body instanceof FormData ? 'FormData' : typeof options.body
+          };
+
+          const startTime = performance.now();
+          const response = await fetch(url, options);
+          const responseTime = Math.round(performance.now() - startTime);
+
+          let body;
+          const contentType = response.headers.get('content-type');
+          if (contentType?.includes('application/json')) {
+            body = await response.json();
+          } else {
+            body = await response.text();
+          }
+
+          this.response = {
+            status: response.status,
+            statusText: response.statusText,
+            body: body,
+            time: responseTime,
+            request: this.lastRequest
+          };
+
+          // Save to history
+          this.saveToHistory();
+
+        } catch (error) {
+          this.response = {
+            status: 0,
+            statusText: 'Network Error',
+            body: { error: error.message },
+            time: 0
+          };
+        } finally {
+          this.isLoading = false;
+        }
+      },
+
+      buildUrl() {
+        let path = this.selectedEndpoint.path;
+
+        // Replace path parameters
+        this.selectedEndpoint.parameters.forEach(param => {
+          if (param.location === 'path') {
+            const value = this.requestParams[param.name];
+            if (value && path.includes(`{${param.name}}`)) {
+              path = path.replace(`{${param.name}}`, value);
+            }
+          }
+        });
+
+        // Build query string from query parameters only
+        const queryParams = new URLSearchParams();
+        this.selectedEndpoint.parameters.forEach(param => {
+          if (param.location === 'query') {
+            const value = this.requestParams[param.name];
+            if (value !== null && value !== undefined && value !== '') {
+              queryParams.append(param.name, value);
+            }
+          }
+        });
+
+        const queryString = queryParams.toString();
+        const url = `${this.getApiUrl()}${path}`;
+        return queryString ? `${url}?${queryString}` : url;
+      },
+
+      buildRequestOptions() {
+        const options = {
+          method: this.selectedEndpoint.method,
+          headers: {}
+        };
+
+        // Add auth header for required or optional auth endpoints
+        if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+          options.headers['Authorization'] = `Bearer ${this.token}`;
+        }
+
+        // Get body parameters only
+        const bodyParams = this.selectedEndpoint.parameters.filter(p => p.location === 'body');
+
+        if (bodyParams.length > 0) {
+          // Check if we have file uploads
+          const hasFileUpload = bodyParams.some(p => p.type === 'file' && this.requestParams[p.name]);
+
+          if (hasFileUpload) {
+            // Use FormData for file uploads
+            const formData = new FormData();
+
+            // Add all body parameters to FormData
+            bodyParams.forEach(param => {
+              const value = this.requestParams[param.name];
+              if (value instanceof File) {
+                formData.append(param.name, value);
+              } else if (value !== null && value !== undefined && value !== '') {
+                formData.append(param.name, value);
+              }
+            });
+
+            options.body = formData;
+            // Don't set Content-Type header - browser will set it with boundary
+          } else {
+            // Use JSON for regular body
+            const body = {};
+            bodyParams.forEach(param => {
+              const value = this.requestParams[param.name];
+              if (value !== null && value !== undefined && value !== '') {
+                body[param.name] = value;
+              }
+            });
+
+            if (Object.keys(body).length > 0) {
+              options.headers['Content-Type'] = 'application/json';
+              options.body = JSON.stringify(body);
+            }
+          }
+        }
+
+        return options;
+      },
+
+      // Response Handling
+      getStatusClass(status) {
+        if (status >= 200 && status < 300) return 'success';
+        if (status >= 400 && status < 500) return 'warning';
+        if (status >= 500) return 'error';
+        return 'info';
+      },
+
+      formatResponseBody(body) {
+        if (typeof body === 'object') {
+          return JSON.stringify(body, null, 2);
+        }
+        return body;
+      },
+
+      // History Management
+      saveToHistory() {
+        const historyItem = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          method: this.selectedEndpoint.method,
+          path: this.selectedEndpoint.path,
+          url: this.buildUrl(),
+          status: this.response.status,
+          request: {
+            params: this.requestParams
+          },
+          response: this.response
+        };
+
+        this.requestHistory.unshift(historyItem);
+        if (this.requestHistory.length > 50) {
+          this.requestHistory = this.requestHistory.slice(0, 50);
+        }
+        localStorage.setItem('request_history', JSON.stringify(this.requestHistory));
+      },
+
+      loadFromHistory(item) {
+        const endpoint = this.endpoints.find(e => e.path === item.path);
+        if (endpoint) {
+          this.selectEndpoint(endpoint);
+          this.requestParams = item.request.params || {};
+          this.response = item.response;
+          this.activeView = 'endpoints';
+        }
+      },
+
+      clearHistory() {
+        if (confirm('Clear all history?')) {
+          this.requestHistory = [];
+          localStorage.removeItem('request_history');
+        }
+      },
+
+      formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return 'Just now';
+        if (diff < 3600000) return `${Math.floor(diff / 60000)} minutes ago`;
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+      },
+
+      // Copy to Clipboard
+      async copyCode(code, tab) {
+        try {
+          await navigator.clipboard.writeText(code);
+          this.copiedCode = tab;
+          setTimeout(() => {
+            this.copiedCode = null;
+          }, 2000);
+        } catch (err) {
+          console.error('Failed to copy code:', err);
+        }
+      },
+
+      // Code Generators
+      generateCurl() {
+        const url = this.buildUrl();
+        const lines = [`curl -X ${this.selectedEndpoint.method} '${url}' \\`];
+
+        // Add auth header
+        if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+          lines.push(`  -H 'Authorization: Bearer ${this.token}' \\`);
+        }
+
+        // Handle body parameters
+        const bodyParams = this.selectedEndpoint.parameters.filter(p => p.location === 'body');
+        const hasFile = bodyParams.some(p => p.type === 'file');
+
+        if (bodyParams.length > 0) {
+          if (hasFile) {
+            // Use FormData with -F flags
+            bodyParams.forEach((param, idx) => {
+              const value = this.requestParams[param.name];
+              if (value) {
+                if (param.type === 'file') {
+                  const isLast = idx === bodyParams.length - 1;
+                  lines.push(`  -F '${param.name}=@/path/to/file.jpg'${isLast ? '' : ' \\'}`);
+                } else {
+                  const isLast = idx === bodyParams.length - 1;
+                  lines.push(`  -F '${param.name}=${value}'${isLast ? '' : ' \\'}`);
+                }
+              }
+            });
+          } else {
+            // Use JSON body
+            lines.push(`  -H 'Content-Type: application/json' \\`);
+            const body = {};
+            bodyParams.forEach(p => {
+              if (this.requestParams[p.name]) {
+                body[p.name] = this.requestParams[p.name];
+              }
+            });
+            const lastLine = `  -d '${JSON.stringify(body)}'`;
+            lines.push(lastLine);
+          }
+        } else {
+          // Remove trailing backslash from last line
+          lines[lines.length - 1] = lines[lines.length - 1].replace(' \\', '');
+        }
+
+        return lines.join('\n');
+      },
+
+      generateJavaScript() {
+        const url = this.buildUrl();
+        const lines = [];
+        const bodyParams = this.selectedEndpoint.parameters.filter(p => p.location === 'body');
+        const hasFile = bodyParams.some(p => p.type === 'file');
+
+        if (hasFile) {
+          // Using FormData
+          lines.push('const formData = new FormData();');
+          bodyParams.forEach(p => {
+            const value = this.requestParams[p.name];
+            if (value) {
+              if (p.type === 'file') {
+                lines.push(`formData.append('${p.name}', fileInput.files[0]);`);
+              } else {
+                lines.push(`formData.append('${p.name}', '${value}');`);
+              }
+            }
+          });
+          lines.push('');
+          lines.push(`const response = await fetch('${url}', {`);
+          lines.push(`  method: '${this.selectedEndpoint.method}',`);
+          if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+            lines.push(`  headers: {`);
+            lines.push(`    'Authorization': 'Bearer ${this.token}'`);
+            lines.push(`  },`);
+          }
+          lines.push(`  body: formData`);
+          lines.push(`});`);
+        } else {
+          // Using JSON
+          lines.push(`const response = await fetch('${url}', {`);
+          lines.push(`  method: '${this.selectedEndpoint.method}',`);
+          lines.push(`  headers: {`);
+          if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+            lines.push(`    'Authorization': 'Bearer ${this.token}',`);
+          }
+          if (bodyParams.length > 0) {
+            lines.push(`    'Content-Type': 'application/json'`);
+          } else {
+            // Remove trailing comma
+            if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+              lines[lines.length - 1] = lines[lines.length - 1].replace(',', '');
+            }
+          }
+          lines.push(`  }`);
+
+          if (bodyParams.length > 0) {
+            const body = {};
+            bodyParams.forEach(p => {
+              if (this.requestParams[p.name]) {
+                body[p.name] = this.requestParams[p.name];
+              }
+            });
+            lines.push(`  body: JSON.stringify(${JSON.stringify(body, null, 2)})`);
+          }
+          lines.push(`});`);
+        }
+
+        lines.push('');
+        lines.push('const data = await response.json();');
+        lines.push('console.log(data);');
+
+        return lines.join('\n');
+      },
+
+      generatePython() {
+        const url = this.buildUrl();
+        const lines = ['import requests'];
+        lines.push('');
+
+        const bodyParams = this.selectedEndpoint.parameters.filter(p => p.location === 'body');
+        const hasFile = bodyParams.some(p => p.type === 'file');
+
+        // Headers
+        if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+          lines.push(`headers = {'Authorization': 'Bearer ${this.token}'}`);
+        }
+
+        if (hasFile) {
+          // Using files
+          lines.push(`files = {`);
+          bodyParams.forEach(p => {
+            const value = this.requestParams[p.name];
+            if (value) {
+              if (p.type === 'file') {
+                lines.push(`    '${p.name}': open('/path/to/file.jpg', 'rb')`);
+              }
+            }
+          });
+          lines.push(`}`);
+
+          // Data for non-file fields
+          const nonFileParams = bodyParams.filter(p => p.type !== 'file' && this.requestParams[p.name]);
+          if (nonFileParams.length > 0) {
+            lines.push(`data = {`);
+            nonFileParams.forEach(p => {
+              lines.push(`    '${p.name}': '${this.requestParams[p.name]}'`);
+            });
+            lines.push(`}`);
+          }
+
+          lines.push('');
+          const method = this.selectedEndpoint.method.toLowerCase();
+          const args = [`'${url}'`];
+          if (nonFileParams.length > 0) {
+            args.push('data=data');
+          }
+          args.push('files=files');
+          if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+            args.push('headers=headers');
+          }
+          lines.push(`response = requests.${method}(${args.join(', ')})`);
+        } else {
+          // Using JSON
+          if (bodyParams.length > 0) {
+            lines.push(`data = {`);
+            bodyParams.forEach(p => {
+              if (this.requestParams[p.name]) {
+                lines.push(`    '${p.name}': '${this.requestParams[p.name]}'`);
+              }
+            });
+            lines.push(`}`);
+            lines.push('');
+          }
+
+          const method = this.selectedEndpoint.method.toLowerCase();
+          const args = [`'${url}'`];
+          if (bodyParams.length > 0) {
+            args.push('json=data');
+          }
+          if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+            args.push('headers=headers');
+          }
+          lines.push(`response = requests.${method}(${args.join(', ')})`);
+        }
+
+        lines.push('print(response.json())');
+
+        return lines.join('\n');
+      },
+
+      generatePHP() {
+        const url = this.buildUrl();
+        const lines = ['<?php'];
+        lines.push('');
+
+        const bodyParams = this.selectedEndpoint.parameters.filter(p => p.location === 'body');
+        const hasFile = bodyParams.some(p => p.type === 'file');
+
+        if (hasFile) {
+          // Using CURLFile for file uploads
+          lines.push(`$ch = curl_init('${url}');`);
+          lines.push('');
+          lines.push('$data = [');
+          bodyParams.forEach(p => {
+            const value = this.requestParams[p.name];
+            if (value) {
+              if (p.type === 'file') {
+                lines.push(`    '${p.name}' => new CURLFile('/path/to/file.jpg'),`);
+              } else {
+                lines.push(`    '${p.name}' => '${value}',`);
+              }
+            }
+          });
+          lines.push('];');
+          lines.push('');
+          lines.push('curl_setopt_array($ch, [');
+          lines.push(`    CURLOPT_CUSTOMREQUEST => '${this.selectedEndpoint.method}',`);
+          lines.push('    CURLOPT_POSTFIELDS => $data,');
+          lines.push('    CURLOPT_RETURNTRANSFER => true,');
+          if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+            lines.push('    CURLOPT_HTTPHEADER => [');
+            lines.push(`        'Authorization: Bearer ${this.token}'`);
+            lines.push('    ]');
+          }
+          lines.push(']);');
+        } else {
+          // Using JSON
+          if (bodyParams.length > 0) {
+            lines.push('$data = [');
+            bodyParams.forEach(p => {
+              if (this.requestParams[p.name]) {
+                lines.push(`    '${p.name}' => '${this.requestParams[p.name]}',`);
+              }
+            });
+            lines.push('];');
+            lines.push('');
+          }
+
+          lines.push(`$ch = curl_init('${url}');`);
+          lines.push('curl_setopt_array($ch, [');
+          lines.push(`    CURLOPT_CUSTOMREQUEST => '${this.selectedEndpoint.method}',`);
+          if (bodyParams.length > 0) {
+            lines.push('    CURLOPT_POSTFIELDS => json_encode($data),');
+          }
+          lines.push('    CURLOPT_RETURNTRANSFER => true,');
+          lines.push('    CURLOPT_HTTPHEADER => [');
+          if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+            lines.push(`        'Authorization: Bearer ${this.token}',`);
+          }
+          if (bodyParams.length > 0) {
+            lines.push(`        'Content-Type: application/json'`);
+          } else {
+            // Remove trailing comma
+            if (this.token && (this.selectedEndpoint.requiresAuth || this.selectedEndpoint.optionalAuth)) {
+              lines[lines.length - 1] = lines[lines.length - 1].replace(',', '');
+            }
+          }
+          lines.push('    ]');
+          lines.push(']);');
+        }
+
+        lines.push('');
+        lines.push('$response = curl_exec($ch);');
+        lines.push('$data = json_decode($response);');
+        lines.push('print_r($data);');
+        lines.push('');
+        lines.push('curl_close($ch);');
+
+        return lines.join('\n');
+      }
+    }));
+
+    // Documentation Viewer Component
+    Alpine.data('documentationViewer', () => ({
+      loading: true,
+      error: null,
+      renderedDocs: '',
+
+      async init() {
+        await this.loadDocumentation();
+      },
+
+      async loadDocumentation() {
+        try {
+          this.loading = true;
+          this.error = null;
+
+          // Fetch markdown documentation
+          const response = await fetch('/api-documentation.md');
+          if (!response.ok) {
+            throw new Error('Failed to load documentation');
+          }
+
+          const markdown = await response.text();
+
+          // Import marked dynamically
+          const { marked } = await import('marked');
+
+          // Configure marked for security and features
+          marked.setOptions({
+            headerIds: true,
+            mangle: false,
+            breaks: true
+          });
+
+          // Render markdown to HTML
+          this.renderedDocs = marked.parse(markdown);
+
+          // Highlight code blocks after render
+          this.$nextTick(() => {
+            document.querySelectorAll('.documentation-content pre code').forEach((block) => {
+              if (window.Prism) {
+                window.Prism.highlightElement(block);
+              }
+            });
+          });
+
+        } catch (error) {
+          console.error('Failed to load documentation:', error);
+          this.error = 'Failed to load documentation. Please try again.';
+        } finally {
+          this.loading = false;
+        }
+      }
+    }));
+  });
+</script>
+
+<style>
+  [x-cloak] { display: none !important; }
+</style>

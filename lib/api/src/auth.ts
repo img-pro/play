@@ -8,16 +8,9 @@ export class ImgAuth {
   public apiUrl: string;
 
   constructor(options: { authUrl?: string; apiUrl?: string } = {}) {
-    // Use correct URLs based on environment
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      // Local development
-      this.authUrl = options.authUrl || 'http://img.test';
-      this.apiUrl = options.apiUrl || 'https://test.api.img.pro';
-    } else {
-      // Production
-      this.authUrl = options.authUrl || 'https://img.pro';
-      this.apiUrl = options.apiUrl || 'https://api.img.pro';
-    }
+    // Default to production URLs
+    this.authUrl = options.authUrl || 'https://img.pro';
+    this.apiUrl = options.apiUrl || 'https://api.img.pro';
   }
 
   /**
