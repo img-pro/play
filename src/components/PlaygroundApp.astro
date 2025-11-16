@@ -6,48 +6,35 @@
   <!-- Header -->
   <header class="playground-header">
     <div class="header-content">
+      <!-- Left: Logo & Navigation -->
       <div class="header-left">
-        <h1 class="logo">
-          <span class="logo-icon">▣</span>
-          Img.pro API
-        </h1>
-        <span class="version">v1.0</span>
+        <button @click="activeView = 'endpoints'" class="logo">API Playground</button>
+
+        <nav class="header-nav">
+          <button @click="activeView = 'documentation'" :class="{'active': activeView === 'documentation'}" class="nav-tab">
+            Documentation
+          </button>
+        </nav>
       </div>
 
-      <nav class="header-nav">
-        <button @click="activeView = 'endpoints'" :class="{'active': activeView === 'endpoints'}" class="nav-btn">
-          Endpoints
-        </button>
-        <button @click="activeView = 'documentation'" :class="{'active': activeView === 'documentation'}" class="nav-btn">
-          Documentation
-        </button>
-        <button @click="activeView = 'examples'" :class="{'active': activeView === 'examples'}" class="nav-btn">
-          Examples
-        </button>
-        <button @click="activeView = 'history'" :class="{'active': activeView === 'history'}" class="nav-btn">
-          History
-        </button>
-      </nav>
-
+      <!-- Right: Actions -->
       <div class="header-right">
-        <button @click="showAuthModal = true" class="btn btn-ghost btn-icon" :class="{'authenticated': isAuthenticated}">
-          <svg x-show="!isAuthenticated" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z"></path>
-            <path d="M2 17L12 22L22 17"></path>
-            <path d="M2 12L12 17L22 12"></path>
-          </svg>
-          <svg x-show="isAuthenticated" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        <button @click="showCommandPalette = true" class="header-btn" title="Search endpoints (⌘K)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
         </button>
 
-        <button @click="showEnvironmentModal = true" class="btn btn-ghost">
-          <span x-text="environment === 'production' ? 'Production' : 'Development'"></span>
+        <button @click="showHistoryPanel = !showHistoryPanel" class="header-btn" title="History (⌘H)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+            <path d="M12 7v5l4 2"></path>
+          </svg>
         </button>
 
-        <button @click="$store.theme.toggle()" class="btn btn-ghost btn-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button @click="toggleTheme" class="header-btn" title="Toggle theme (⌘⇧L)">
+          <svg x-show="currentTheme === 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"></circle>
             <line x1="12" y1="1" x2="12" y2="3"></line>
             <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -57,6 +44,16 @@
             <line x1="21" y1="12" x2="23" y2="12"></line>
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg x-show="currentTheme === 'light'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <button @click="showAuthModal = true" class="header-btn" :class="{'is-authenticated': isAuthenticated}" :title="isAuthenticated ? 'Authenticated' : 'Add API token'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
         </button>
       </div>
@@ -70,121 +67,142 @@
       <div class="endpoints-grid">
         <!-- Sidebar -->
         <aside class="endpoints-sidebar">
-          <div class="sidebar-section">
-            <h3 class="sidebar-title">Endpoints</h3>
-            <div class="endpoint-list">
-              <template x-for="endpoint in endpoints" :key="endpoint.id">
-                <button
-                  @click="selectEndpoint(endpoint)"
-                  :class="{'active': selectedEndpoint?.id === endpoint.id}"
-                  class="endpoint-item"
-                >
-                  <span class="method-badge" :class="'method-' + endpoint.method.toLowerCase()" x-text="endpoint.method"></span>
-                  <span class="endpoint-path" x-text="endpoint.path"></span>
-                </button>
-              </template>
+          <template x-for="group in endpointGroups" :key="group.name">
+            <div class="sidebar-section">
+              <button @click="group.collapsed = !group.collapsed" class="sidebar-title-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron" :class="{'rotated': !group.collapsed}">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <h3 class="sidebar-title" x-text="group.name"></h3>
+              </button>
+              <div x-show="!group.collapsed" class="endpoint-list">
+                <template x-for="endpointId in group.endpoints" :key="endpointId">
+                  <div x-data="{ endpoint: getEndpoint(endpointId) }">
+                    <button
+                      @click="selectEndpoint(endpoint)"
+                      :class="{'active': selectedEndpoint?.id === endpoint.id}"
+                      class="endpoint-item"
+                    >
+                      <span class="method-badge" :class="'method-' + endpoint.method.toLowerCase()" x-text="endpoint.method"></span>
+                      <span class="endpoint-path" x-text="endpoint.path"></span>
+                    </button>
+                  </div>
+                </template>
+              </div>
             </div>
-          </div>
+          </template>
         </aside>
 
-        <!-- Main Content -->
-        <div class="endpoint-content">
+        <!-- Main Content - Split Layout -->
+        <div class="endpoint-content-split">
           <template x-if="selectedEndpoint">
-            <div class="endpoint-detail">
-              <!-- Endpoint Header -->
-              <div class="endpoint-header">
-                <div class="endpoint-title">
-                  <span class="method-badge" :class="'method-' + selectedEndpoint.method.toLowerCase()" x-text="selectedEndpoint.method"></span>
-                  <h2 x-text="selectedEndpoint.path"></h2>
-                </div>
-                <p class="endpoint-description" x-text="selectedEndpoint.description"></p>
-              </div>
-
-              <!-- Request Builder -->
-              <div class="request-builder">
-                <div class="tabs">
-                  <div class="tab-buttons">
-                    <button @click="requestTab = 'request'" :class="{'active': requestTab === 'request'}" class="tab">Request</button>
-                    <button @click="requestTab = 'curl'" :class="{'active': requestTab === 'curl'}" class="tab">cURL</button>
-                    <button @click="requestTab = 'javascript'" :class="{'active': requestTab === 'javascript'}" class="tab">JavaScript</button>
-                    <button @click="requestTab = 'python'" :class="{'active': requestTab === 'python'}" class="tab">Python</button>
-                    <button @click="requestTab = 'php'" :class="{'active': requestTab === 'php'}" class="tab">PHP</button>
+            <div class="split-container">
+              <!-- Left: Request Builder -->
+              <div class="split-left">
+                <div class="request-detail">
+                  <!-- Compact Header -->
+                  <div class="request-header">
+                    <div class="request-title">
+                      <span class="method-badge" :class="'method-' + selectedEndpoint.method.toLowerCase()" x-text="selectedEndpoint.method"></span>
+                      <span class="request-path" x-text="selectedEndpoint.path"></span>
+                    </div>
+                    <button
+                      @click="executeRequest"
+                      :disabled="isLoading"
+                      class="btn-run-compact"
+                      title="Run Request (⌘↵)"
+                    >
+                      <svg x-show="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                      </svg>
+                      <span x-show="isLoading" class="spinner-sm"></span>
+                      <span>Run</span>
+                    </button>
                   </div>
-                  <button
-                    @click="executeRequest"
-                    :disabled="isLoading"
-                    class="btn-run"
-                  >
-                    <svg x-show="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                    </svg>
-                    <span x-show="isLoading" class="spinner-sm"></span>
-                    <span>Run</span>
-                  </button>
-                </div>
+                  <p class="request-description" x-text="selectedEndpoint.description"></p>
+
+                  <!-- Minimal Tabs -->
+                  <div class="request-tabs">
+                    <button @click="requestTab = 'request'" :class="{'active': requestTab === 'request'}" class="tab-minimal">Request</button>
+                    <button @click="requestTab = 'curl'" :class="{'active': requestTab === 'curl'}" class="tab-minimal">cURL</button>
+                    <button @click="requestTab = 'javascript'" :class="{'active': requestTab === 'javascript'}" class="tab-minimal">JavaScript</button>
+                    <button @click="requestTab = 'python'" :class="{'active': requestTab === 'python'}" class="tab-minimal">Python</button>
+                    <button @click="requestTab = 'php'" :class="{'active': requestTab === 'php'}" class="tab-minimal">PHP</button>
+                  </div>
+
+                  <!-- Request Content -->
+                  <div class="request-content">
 
                 <!-- Request Tab -->
-                <div x-show="requestTab === 'request'" class="tab-content">
-                  <div class="request-form">
-                    <!-- Auth Token (if required) -->
-                    <div x-show="selectedEndpoint.requiresAuth || selectedEndpoint.optionalAuth" class="param-row auth-row">
-                      <label class="param-label">
-                        <span>Authorization</span>
-                        <span x-show="selectedEndpoint.requiresAuth" class="required">*</span>
-                        <span class="param-type">header</span>
-                      </label>
-                      <div class="param-input-group">
-                        <div class="input-with-icon">
-                          <input
-                            :type="showToken ? 'text' : 'password'"
-                            x-model="token"
-                            @input="saveToken"
-                            class="input"
-                            placeholder="your-api-token"
-                            :required="selectedEndpoint.requiresAuth"
-                          >
-                          <button @click="showToken = !showToken" type="button" class="input-icon-btn" :title="showToken ? 'Hide token' : 'Show token'">
-                            <svg x-show="!showToken" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                              <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                            <svg x-show="showToken" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                              <line x1="1" y1="1" x2="23" y2="23"></line>
-                            </svg>
-                          </button>
-                        </div>
-                        <p class="param-description">Bearer token for authentication</p>
+                <div x-show="requestTab === 'request'">
+                  <div class="param-form">
+                    <!-- Base URL Section -->
+                    <div class="param-section-compact">
+                      <div class="param-section-header">
+                        <h4>Base URL</h4>
+                        <button @click="toggleEndpointMode" class="btn-toggle" type="button">
+                          <span x-text="endpointMode === 'production' ? 'Custom' : 'Production'"></span>
+                        </button>
+                      </div>
+
+                      <!-- Production Mode (Read-only) -->
+                      <div x-show="endpointMode === 'production'" class="endpoint-display">
+                        <span class="endpoint-url">https://api.img.pro</span>
+                      </div>
+
+                      <!-- Custom Mode (Editable) -->
+                      <input
+                        x-show="endpointMode === 'custom'"
+                        type="text"
+                        x-model="customApiUrl"
+                        @input="saveCustomApiUrl"
+                        class="input"
+                        placeholder="https://test.api.img.pro"
+                      >
+                    </div>
+
+                    <!-- Auth Section -->
+                    <div x-show="selectedEndpoint.requiresAuth || selectedEndpoint.optionalAuth" class="param-section-compact">
+                      <div class="param-section-header">
+                        <h4>
+                          <span>Authentication</span>
+                          <span x-show="selectedEndpoint.requiresAuth" class="required">*</span>
+                        </h4>
+                      </div>
+                      <div class="input-with-icon">
+                        <input
+                          :type="showToken ? 'text' : 'password'"
+                          x-model="token"
+                          @input="saveToken"
+                          class="input"
+                          placeholder="Bearer token"
+                          :required="selectedEndpoint.requiresAuth"
+                        >
+                        <button @click="showToken = !showToken" type="button" class="input-icon-btn" :title="showToken ? 'Hide token' : 'Show token'">
+                          <svg x-show="!showToken" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                          </svg>
+                          <svg x-show="showToken" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        </button>
                       </div>
                     </div>
 
-                    <!-- All Parameters -->
-                    <template x-for="param in selectedEndpoint.parameters" :key="param.name">
-                      <div class="param-row">
-                        <label class="param-label">
-                          <span x-text="param.name"></span>
-                          <span x-show="param.required" class="required">*</span>
-                          <span class="param-type" x-text="param.location"></span>
-                        </label>
-                        <div class="param-input-group">
-                          <!-- File input -->
-                          <template x-if="param.type === 'file'">
-                            <div class="file-input-wrapper">
-                              <input
-                                type="file"
-                                @change="handleFileSelect($event, param.name)"
-                                class="file-input"
-                                :required="param.required"
-                                accept="image/*"
-                              >
-                              <div class="file-input-display">
-                                <span x-text="requestParams[param.name]?.name || 'Choose a file...'" class="file-name"></span>
-                                <button type="button" class="btn btn-secondary btn-sm">Browse</button>
-                              </div>
-                            </div>
-                          </template>
-                          <!-- Regular input -->
-                          <template x-if="param.type !== 'file'">
+                    <!-- Path Parameters -->
+                    <template x-if="selectedEndpoint.parameters.filter(p => p.location === 'path').length > 0">
+                      <div class="param-section">
+                        <div class="param-section-header">
+                          <h4>Path Parameters</h4>
+                        </div>
+                        <template x-for="param in selectedEndpoint.parameters.filter(p => p.location === 'path')" :key="param.name">
+                          <div class="param-field">
+                            <label class="param-field-label">
+                              <span x-text="param.name"></span>
+                              <span x-show="param.required" class="required">*</span>
+                            </label>
                             <input
                               :type="param.type === 'number' ? 'number' : 'text'"
                               x-model="requestParams[param.name]"
@@ -192,8 +210,127 @@
                               :placeholder="param.placeholder"
                               :required="param.required"
                             >
+                            <p class="param-hint" x-text="param.description"></p>
+                          </div>
+                        </template>
+                      </div>
+                    </template>
+
+                    <!-- Query Parameters -->
+                    <template x-if="selectedEndpoint.parameters.filter(p => p.location === 'query').length > 0">
+                      <div class="param-section">
+                        <div class="param-section-header">
+                          <h4>Query Parameters</h4>
+                          <template x-if="selectedEndpoint.parameters.filter(p => p.location === 'query' && !p.required).length > 0">
+                            <button @click="showOptionalParams.query = !showOptionalParams.query" class="btn-toggle" type="button">
+                              <span x-text="showOptionalParams.query ? 'Hide' : 'Show'"></span>
+                              <span x-text="selectedEndpoint.parameters.filter(p => p.location === 'query' && !p.required).length"></span>
+                              <span>optional</span>
+                            </button>
                           </template>
-                          <p class="param-description" x-text="param.description"></p>
+                        </div>
+                        <!-- Required query params -->
+                        <template x-for="param in selectedEndpoint.parameters.filter(p => p.location === 'query' && p.required)" :key="param.name">
+                          <div class="param-field">
+                            <label class="param-field-label">
+                              <span x-text="param.name"></span>
+                              <span class="required">*</span>
+                            </label>
+                            <input
+                              :type="param.type === 'number' ? 'number' : 'text'"
+                              x-model="requestParams[param.name]"
+                              class="input"
+                              :placeholder="param.placeholder"
+                              required
+                            >
+                            <p class="param-hint" x-text="param.description"></p>
+                          </div>
+                        </template>
+                        <!-- Optional query params (collapsible) -->
+                        <div x-show="showOptionalParams.query">
+                          <template x-for="param in selectedEndpoint.parameters.filter(p => p.location === 'query' && !p.required)" :key="param.name">
+                            <div class="param-field">
+                              <label class="param-field-label">
+                                <span x-text="param.name"></span>
+                              </label>
+                              <input
+                                :type="param.type === 'number' ? 'number' : 'text'"
+                                x-model="requestParams[param.name]"
+                                class="input"
+                                :placeholder="param.placeholder"
+                              >
+                              <p class="param-hint" x-text="param.description"></p>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- Body Parameters -->
+                    <template x-if="selectedEndpoint.parameters.filter(p => p.location === 'body').length > 0">
+                      <div class="param-section">
+                        <div class="param-section-header">
+                          <h4>Body Parameters</h4>
+                          <template x-if="selectedEndpoint.parameters.filter(p => p.location === 'body' && !p.required).length > 0">
+                            <button @click="showOptionalParams.body = !showOptionalParams.body" class="btn-toggle" type="button">
+                              <span x-text="showOptionalParams.body ? 'Hide' : 'Show'"></span>
+                              <span x-text="selectedEndpoint.parameters.filter(p => p.location === 'body' && !p.required).length"></span>
+                              <span>optional</span>
+                            </button>
+                          </template>
+                        </div>
+                        <!-- Required body params -->
+                        <template x-for="param in selectedEndpoint.parameters.filter(p => p.location === 'body' && p.required)" :key="param.name">
+                          <div class="param-field">
+                            <label class="param-field-label">
+                              <span x-text="param.name"></span>
+                              <span class="required">*</span>
+                            </label>
+                            <!-- File input -->
+                            <template x-if="param.type === 'file'">
+                              <div class="file-input-wrapper">
+                                <input
+                                  type="file"
+                                  @change="handleFileSelect($event, param.name)"
+                                  class="file-input"
+                                  required
+                                  accept="image/*"
+                                >
+                                <div class="file-input-display">
+                                  <span x-text="requestParams[param.name]?.name || 'Choose a file...'" class="file-name"></span>
+                                  <button type="button" class="btn btn-secondary btn-sm">Browse</button>
+                                </div>
+                              </div>
+                            </template>
+                            <!-- Regular input -->
+                            <template x-if="param.type !== 'file'">
+                              <input
+                                :type="param.type === 'number' ? 'number' : 'text'"
+                                x-model="requestParams[param.name]"
+                                class="input"
+                                :placeholder="param.placeholder"
+                                required
+                              >
+                            </template>
+                            <p class="param-hint" x-text="param.description"></p>
+                          </div>
+                        </template>
+                        <!-- Optional body params (collapsible) -->
+                        <div x-show="showOptionalParams.body">
+                          <template x-for="param in selectedEndpoint.parameters.filter(p => p.location === 'body' && !p.required)" :key="param.name">
+                            <div class="param-field">
+                              <label class="param-field-label">
+                                <span x-text="param.name"></span>
+                              </label>
+                              <input
+                                :type="param.type === 'number' ? 'number' : 'text'"
+                                x-model="requestParams[param.name]"
+                                class="input"
+                                :placeholder="param.placeholder"
+                              >
+                              <p class="param-hint" x-text="param.description"></p>
+                            </div>
+                          </template>
                         </div>
                       </div>
                     </template>
@@ -201,7 +338,7 @@
                 </div>
 
                 <!-- cURL Tab -->
-                <div x-show="requestTab === 'curl'" class="tab-content">
+                <div x-show="requestTab === 'curl'">
                   <div class="code-example">
                     <button @click="copyCode(generateCurl(), 'curl')" class="copy-btn" :class="{'copied': copiedCode === 'curl'}">
                       <svg x-show="copiedCode !== 'curl'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -218,7 +355,7 @@
                 </div>
 
                 <!-- JavaScript Tab -->
-                <div x-show="requestTab === 'javascript'" class="tab-content">
+                <div x-show="requestTab === 'javascript'">
                   <div class="code-example">
                     <button @click="copyCode(generateJavaScript(), 'javascript')" class="copy-btn" :class="{'copied': copiedCode === 'javascript'}">
                       <svg x-show="copiedCode !== 'javascript'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -235,7 +372,7 @@
                 </div>
 
                 <!-- Python Tab -->
-                <div x-show="requestTab === 'python'" class="tab-content">
+                <div x-show="requestTab === 'python'">
                   <div class="code-example">
                     <button @click="copyCode(generatePython(), 'python')" class="copy-btn" :class="{'copied': copiedCode === 'python'}">
                       <svg x-show="copiedCode !== 'python'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -252,7 +389,7 @@
                 </div>
 
                 <!-- PHP Tab -->
-                <div x-show="requestTab === 'php'" class="tab-content">
+                <div x-show="requestTab === 'php'">
                   <div class="code-example">
                     <button @click="copyCode(generatePHP(), 'php')" class="copy-btn" :class="{'copied': copiedCode === 'php'}">
                       <svg x-show="copiedCode !== 'php'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -267,46 +404,68 @@
                     <pre><code class="language-php" x-text="generatePHP()"></code></pre>
                   </div>
                 </div>
+                  </div>
+                </div>
               </div>
 
-              <!-- Response Section -->
-              <div x-show="response" class="response-section">
-                <div class="response-header">
-                  <h3>Response</h3>
-                  <div class="response-meta">
-                    <span class="response-status" :class="'status-' + getStatusClass(response?.status)">
-                      <span x-text="response?.status"></span>
-                      <span x-text="response?.statusText"></span>
-                    </span>
-                    <span class="response-time" x-text="(response?.time || 0) + 'ms'"></span>
+              <!-- Right: Response Panel (Always Visible) -->
+              <div class="split-right">
+                <div x-show="response" class="response-detail">
+                  <!-- Compact Response Header -->
+                  <div class="response-header-compact">
+                    <div class="response-title">
+                      <span class="status-badge" :class="'status-' + getStatusClass(response?.status)">
+                        <span x-text="response?.status"></span>
+                      </span>
+                      <span class="status-text" x-text="response?.statusText"></span>
+                    </div>
+                    <span class="response-time-badge" x-text="(response?.time || 0) + 'ms'"></span>
+                  </div>
+
+                  <!-- Response Content -->
+                  <div class="response-content">
+                    <!-- Request Details (collapsible) -->
+                    <details x-show="response?.request" class="debug-section">
+                      <summary>Request Details</summary>
+                      <div class="debug-content">
+                        <div class="debug-row">
+                          <span class="debug-label">URL</span>
+                          <code class="debug-value" x-text="response?.request?.url"></code>
+                        </div>
+                        <div class="debug-row">
+                          <span class="debug-label">Method</span>
+                          <code class="debug-value" x-text="response?.request?.method"></code>
+                        </div>
+                        <div class="debug-row">
+                          <span class="debug-label">Headers</span>
+                          <pre class="debug-code"><code x-text="JSON.stringify(response?.request?.headers || {}, null, 2)"></code></pre>
+                        </div>
+                        <div class="debug-row" x-show="response?.request?.bodyType && response?.request?.bodyType !== 'undefined'">
+                          <span class="debug-label">Body Type</span>
+                          <code class="debug-value" x-text="response?.request?.bodyType || 'none'"></code>
+                        </div>
+                      </div>
+                    </details>
+
+                    <!-- Response Body -->
+                    <div class="response-body-section">
+                      <div class="response-body-header">
+                        <h4>Response</h4>
+                      </div>
+                      <div class="response-code">
+                        <pre><code x-text="formatResponseBody(response?.body)"></code></pre>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Request Details (for debugging) -->
-                <details x-show="response?.request" class="request-details">
-                  <summary>Request Details</summary>
-                  <div class="request-info">
-                    <div class="info-row">
-                      <span class="info-label">URL:</span>
-                      <code x-text="response?.request?.url"></code>
-                    </div>
-                    <div class="info-row">
-                      <span class="info-label">Method:</span>
-                      <code x-text="response?.request?.method"></code>
-                    </div>
-                    <div class="info-row">
-                      <span class="info-label">Headers:</span>
-                      <pre class="info-code"><code x-text="JSON.stringify(response?.request?.headers || {}, null, 2)"></code></pre>
-                    </div>
-                    <div class="info-row">
-                      <span class="info-label">Body Type:</span>
-                      <code x-text="response?.request?.bodyType || 'none'"></code>
-                    </div>
-                  </div>
-                </details>
-
-                <div class="response-body">
-                  <pre class="code-block"><code x-text="formatResponseBody(response?.body)"></code></pre>
+                <!-- Empty State -->
+                <div x-show="!response" class="response-empty-state">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                  </svg>
+                  <h3>Ready to test</h3>
+                  <p>Click <strong>Run</strong> to send the request and see the response here</p>
                 </div>
               </div>
             </div>
@@ -337,38 +496,84 @@
       </div>
     </div>
 
-    <!-- Examples View -->
-    <div x-show="activeView === 'examples'" class="view-container">
-      <div class="examples">
-        <h1>Code Examples</h1>
-        <p>Example code for common use cases</p>
+    <!-- History Slide-out Panel -->
+    <div x-show="showHistoryPanel" x-cloak class="history-panel" @click.self="showHistoryPanel = false">
+      <div class="panel-content">
+        <div class="panel-header">
+          <h2>History</h2>
+          <div class="panel-header-actions">
+            <button @click="clearHistory" class="btn btn-ghost btn-sm">Clear All</button>
+            <button @click="showHistoryPanel = false" class="btn btn-ghost btn-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="history-list">
+            <template x-for="item in requestHistory" :key="item.id">
+              <button class="history-item" @click="loadFromHistory(item); showHistoryPanel = false">
+                <div class="history-method">
+                  <span class="method-badge" :class="'method-' + item.method.toLowerCase()" x-text="item.method"></span>
+                </div>
+                <div class="history-details">
+                  <p class="history-path" x-text="item.path"></p>
+                  <p class="history-timestamp" x-text="formatTimestamp(item.timestamp)"></p>
+                </div>
+                <div class="history-status">
+                  <span :class="'status-' + getStatusClass(item.status)" x-text="item.status"></span>
+                </div>
+              </button>
+            </template>
+            <div x-show="requestHistory.length === 0" class="empty-history">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                <path d="M3 3v5h5"></path>
+                <path d="M12 7v5l4 2"></path>
+              </svg>
+              <p>No requests yet</p>
+              <p class="text-muted">Your request history will appear here</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- History View -->
-    <div x-show="activeView === 'history'" class="view-container">
-      <div class="history">
-        <div class="history-header">
-          <h2>Request History</h2>
-          <button @click="clearHistory" class="btn btn-ghost">Clear All</button>
+    <!-- Command Palette -->
+    <div x-show="showCommandPalette" x-cloak class="command-palette-overlay" @click.self="showCommandPalette = false" @keydown.escape.window="showCommandPalette = false">
+      <div class="command-palette">
+        <div class="command-search">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <input
+            type="text"
+            x-model="commandSearch"
+            placeholder="Search endpoints..."
+            class="command-input"
+            x-ref="commandInput"
+            @keydown.down.prevent="selectedCommandIndex = Math.min(selectedCommandIndex + 1, filteredEndpoints.length - 1)"
+            @keydown.up.prevent="selectedCommandIndex = Math.max(selectedCommandIndex - 1, 0)"
+            @keydown.enter.prevent="selectCommandEndpoint(filteredEndpoints[selectedCommandIndex])"
+          >
+          <span class="kbd">ESC</span>
         </div>
-        <div class="history-list">
-          <template x-for="item in requestHistory" :key="item.id">
-            <div class="history-item" @click="loadFromHistory(item)">
-              <div class="history-method">
-                <span class="method-badge" :class="'method-' + item.method.toLowerCase()" x-text="item.method"></span>
-              </div>
-              <div class="history-details">
-                <p class="history-path" x-text="item.path"></p>
-                <p class="history-timestamp" x-text="formatTimestamp(item.timestamp)"></p>
-              </div>
-              <div class="history-status">
-                <span :class="'status-' + getStatusClass(item.status)" x-text="item.status"></span>
-              </div>
-            </div>
+        <div class="command-results">
+          <template x-for="(endpoint, index) in filteredEndpoints" :key="endpoint.id">
+            <button
+              @click="selectCommandEndpoint(endpoint)"
+              :class="{'active': index === selectedCommandIndex}"
+              class="command-item"
+            >
+              <span class="method-badge" :class="'method-' + endpoint.method.toLowerCase()" x-text="endpoint.method"></span>
+              <span class="command-path" x-text="endpoint.path"></span>
+              <span class="command-description" x-text="endpoint.description"></span>
+            </button>
           </template>
-          <div x-show="requestHistory.length === 0" class="empty-history">
-            <p>No requests in history</p>
+          <div x-show="filteredEndpoints.length === 0" class="command-empty">
+            <p>No endpoints found</p>
           </div>
         </div>
       </div>
@@ -402,45 +607,6 @@
     </div>
   </div>
 
-  <!-- Environment Modal -->
-  <div x-show="showEnvironmentModal" x-cloak class="modal" @click.self="showEnvironmentModal = false">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Environment Settings</h2>
-        <button @click="showEnvironmentModal = false" class="btn btn-ghost btn-icon">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="environment-options">
-          <label class="radio-card">
-            <input type="radio" x-model="environment" value="production">
-            <div class="radio-card-content">
-              <h3>Production</h3>
-              <p>https://api.img.pro</p>
-            </div>
-          </label>
-          <label class="radio-card">
-            <input type="radio" x-model="environment" value="custom" @click="$nextTick(() => $refs.customUrlInput.focus())">
-            <div class="radio-card-content">
-              <h3>Development</h3>
-              <input
-                x-ref="customUrlInput"
-                type="text"
-                x-model="customApiUrl"
-                class="input"
-                placeholder="https://test.api.img.pro"
-                @keyup.enter="showEnvironmentModal = false; applyEnvironment()"
-                @click.stop="environment = 'custom'"
-                style="margin-top: 0.5rem; font-size: 0.875rem;"
-              >
-            </div>
-          </label>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button @click="showEnvironmentModal = false; applyEnvironment()" class="btn btn-primary">Done</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -451,7 +617,7 @@
       activeView: 'endpoints',
       selectedEndpoint: null,
       requestTab: 'request',
-      environment: localStorage.getItem('environment') || 'production',
+      endpointMode: localStorage.getItem('endpoint_mode') || 'production',
       customApiUrl: localStorage.getItem('custom_api_url') || 'https://test.api.img.pro',
       token: localStorage.getItem('img_api_token') || '',
       isAuthenticated: false,
@@ -459,10 +625,22 @@
       response: null,
       showToken: false,
       lastRequest: null,
+      currentTheme: document.documentElement.getAttribute('data-theme') || 'light',
+      showOptionalParams: {
+        query: false,
+        body: false
+      },
+      splitView: false,
+      codeLanguage: 'curl',
 
-      // Modals
+      // Modals & Panels
       showAuthModal: false,
-      showEnvironmentModal: false,
+      showCommandPalette: false,
+      showHistoryPanel: false,
+
+      // Command Palette
+      commandSearch: '',
+      selectedCommandIndex: 0,
 
       // Request Data
       requestParams: {},
@@ -473,16 +651,32 @@
       // Clipboard
       copiedCode: null,
 
+      // Endpoint Groups (CRUD - sorted by /media then /media/{id})
+      endpointGroups: [
+        {
+          name: 'Create',
+          collapsed: false,
+          endpoints: ['upload', 'import']  // POST /v1/upload, /v1/import
+        },
+        {
+          name: 'Read',
+          collapsed: false,
+          endpoints: ['list-media', 'get-media']  // GET /v1/media, /v1/media/{id}
+        },
+        {
+          name: 'Update',
+          collapsed: false,
+          endpoints: ['batch-update', 'update-media']  // PATCH /v1/media, /v1/media/{id}
+        },
+        {
+          name: 'Delete',
+          collapsed: false,
+          endpoints: ['batch-delete', 'delete-media']  // DELETE /v1/media, /v1/media/{id}
+        }
+      ],
+
       // Endpoints
       endpoints: [
-        {
-          id: 'get-root',
-          method: 'GET',
-          path: '/',
-          description: 'Get service information and available endpoints',
-          requiresAuth: false,
-          parameters: []
-        },
         {
           id: 'upload',
           method: 'POST',
@@ -803,6 +997,15 @@
         this.loadAuth();
         this.selectEndpoint(this.endpoints[0]);
 
+        // Watch for theme changes
+        const themeObserver = new MutationObserver(() => {
+          this.currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        });
+        themeObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['data-theme']
+        });
+
         // Watch for tab changes to trigger syntax highlighting
         this.$watch('requestTab', () => {
           this.$nextTick(() => {
@@ -813,6 +1016,54 @@
             });
           });
         });
+
+        // Watch for command palette to focus input
+        this.$watch('showCommandPalette', (value) => {
+          if (value) {
+            this.commandSearch = '';
+            this.selectedCommandIndex = 0;
+            this.$nextTick(() => this.$refs.commandInput?.focus());
+          }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+          // Cmd/Ctrl + K - Command Palette
+          if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            this.showCommandPalette = !this.showCommandPalette;
+          }
+          // Cmd/Ctrl + H - History
+          if ((e.metaKey || e.ctrlKey) && e.key === 'h') {
+            e.preventDefault();
+            this.showHistoryPanel = !this.showHistoryPanel;
+          }
+          // Cmd/Ctrl + Enter - Run request
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.selectedEndpoint) {
+            e.preventDefault();
+            this.executeRequest();
+          }
+        });
+      },
+
+      // Computed properties
+      get filteredEndpoints() {
+        if (!this.commandSearch) return this.endpoints;
+        const search = this.commandSearch.toLowerCase();
+        return this.endpoints.filter(ep =>
+          ep.path.toLowerCase().includes(search) ||
+          ep.description.toLowerCase().includes(search) ||
+          ep.method.toLowerCase().includes(search)
+        );
+      },
+
+      // Command Palette
+      selectCommandEndpoint(endpoint) {
+        if (endpoint) {
+          this.selectEndpoint(endpoint);
+          this.showCommandPalette = false;
+          this.activeView = 'endpoints';
+        }
       },
 
       // Auth Management
@@ -835,23 +1086,29 @@
         this.showAuthModal = false;
       },
 
-      // Environment
-      applyEnvironment() {
-        localStorage.setItem('environment', this.environment);
-        if (this.environment === 'custom') {
-          localStorage.setItem('custom_api_url', this.customApiUrl);
-        }
+      // Theme Management
+      toggleTheme() {
+        this.$store.theme.toggle();
+      },
+
+      // Endpoint Mode
+      toggleEndpointMode() {
+        this.endpointMode = this.endpointMode === 'production' ? 'custom' : 'production';
+        localStorage.setItem('endpoint_mode', this.endpointMode);
+      },
+
+      saveCustomApiUrl() {
+        const url = this.customApiUrl.trim();
+        localStorage.setItem('custom_api_url', url);
       },
 
       getApiUrl() {
-        if (this.environment === 'production') {
+        if (this.endpointMode === 'production') {
           return 'https://api.img.pro';
-        } else if (this.environment === 'custom') {
+        } else {
           // Remove trailing slash if present
-          return this.customApiUrl.replace(/\/$/, '');
+          return (this.customApiUrl || 'https://test.api.img.pro').replace(/\/$/, '');
         }
-        // Fallback (shouldn't happen)
-        return 'https://api.img.pro';
       },
 
       // Endpoint Selection
@@ -860,6 +1117,11 @@
         this.requestParams = {};
         this.response = null;
         this.requestTab = 'request';
+      },
+
+      // Get endpoint by ID
+      getEndpoint(id) {
+        return this.endpoints.find(e => e.id === id);
       },
 
 
