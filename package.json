@@ -1,0 +1,19 @@
+{
+  "name": "@img-pro/playground",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "API Playground for Img.pro - Test and explore the image hosting API",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@img-pro/api": "file:./lib/api",
+    "@tailwindcss/vite": "^4.1.17",
+    "alpinejs": "^3.15.2",
+    "astro": "^5.15.8",
+    "tailwindcss": "^4.1.17"
+  }
+}

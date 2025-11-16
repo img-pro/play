@@ -1,0 +1,18 @@
+---
+export interface Props {
+  appName: string;
+}
+
+const { appName } = Astro.props;
+---
+
+<header class="border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-6 py-4">
+    <div class="flex items-center justify-between">
+      <h1 class="text-xl font-mono">{appName}</h1>
+      <div id="auth-status" class="flex items-center gap-4">
+        <!-- Auth status will be managed by Alpine.js -->
+      </div>
+    </div>
+  </div>
+</header>

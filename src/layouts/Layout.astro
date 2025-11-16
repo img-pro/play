@@ -1,0 +1,38 @@
+---
+export interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content="Test and explore the Img.pro API" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <slot />
+
+    <script>
+      // Initialize Alpine.js
+      import Alpine from 'alpinejs';
+      window.Alpine = Alpine;
+      Alpine.start();
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  /* Import Tailwind styles */
+  @import '../styles/global.css';
+
+  /* Alpine cloak */
+  [x-cloak] {
+    display: none !important;
+  }
+</style>

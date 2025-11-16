@@ -1,0 +1,438 @@
+---
+// This component will be hydrated on the client with Alpine.js
+---
+
+<div
+  x-data="playground"
+  x-init="init()"
+  class="max-w-5xl mx-auto"
+>
+  <!-- Authentication -->
+  <div x-show="!authenticated" class="text-center py-16">
+    <p class="text-gray-600 mb-6">Enter your API token to use the playground</p>
+
+    <div class="max-w-md mx-auto space-y-4">
+      <input
+        type="password"
+        x-model="tokenInput"
+        @keyup.enter="setToken()"
+        placeholder="your-api-token-here"
+        class="w-full px-4 py-2 font-mono text-sm border border-gray-300 focus:border-blue-600 focus:outline-none"
+      />
+
+      <button
+        @click="setToken()"
+        class="w-full px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+      >
+        Authenticate
+      </button>
+
+      <p class="text-xs text-gray-500">
+        Get your token from
+        <a :href="authUrl + '/api-keys'" target="_blank" class="text-blue-600 underline">
+          <span x-text="authUrl + '/api-keys'"></span>
+        </a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Playground Interface -->
+  <div x-show="authenticated" x-cloak>
+    <!-- Endpoint Selector -->
+    <div class="mb-6">
+      <label class="block text-xs text-gray-600 mb-2">Select Endpoint</label>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <template x-for="(endpoint, key) in endpoints" :key="key">
+          <button
+            @click="selectedEndpoint = key; response = null"
+            class="px-3 py-2 border text-xs font-mono text-left transition-colors"
+            :class="selectedEndpoint === key ?
+                   'bg-gray-50 ' + getMethodColor(endpoint.method) :
+                   'border-gray-300 hover:border-gray-400'"
+          >
+            <span class="font-bold" x-text="endpoint.method"></span>
+            <span x-text="endpoint.path"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <!-- Current Endpoint -->
+    <div class="border border-gray-200 p-4 mb-6">
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-mono text-sm">
+            <span
+              class="px-2 py-0.5 border rounded text-xs"
+              :class="getMethodColor(currentEndpoint.method)"
+              x-text="currentEndpoint.method"
+            ></span>
+            <span class="ml-2" x-text="currentEndpoint.path"></span>
+          </h3>
+          <button
+            @click="copyToClipboard(requestUrl)"
+            class="text-xs text-gray-500 hover:text-gray-700"
+          >
+            <span x-show="copiedText === requestUrl">✓ Copied</span>
+            <span x-show="copiedText !== requestUrl">Copy URL</span>
+          </button>
+        </div>
+        <p class="text-xs text-gray-600" x-text="currentEndpoint.description"></p>
+      </div>
+
+      <!-- Parameters -->
+      <div x-show="Object.keys(currentEndpoint.params).length > 0" class="mb-4">
+        <h4 class="text-xs font-bold text-gray-700 mb-2">Parameters</h4>
+
+        <!-- Upload params -->
+        <div x-show="selectedEndpoint === 'upload'" class="space-y-2">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">File *</label>
+            <input
+              type="file"
+              @change="handleFileSelect($event)"
+              accept="image/*"
+              class="text-xs border border-gray-300 px-3 py-1.5 w-full"
+            />
+            <span
+              x-show="currentEndpoint.params.file"
+              class="text-xs text-green-600 mt-1 block"
+              x-text="currentEndpoint.params.file ? currentEndpoint.params.file.name : ''"
+            ></span>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Description</label>
+            <input
+              type="text"
+              x-model="currentEndpoint.params.description"
+              placeholder="Optional description"
+              class="text-xs font-mono border border-gray-300 px-3 py-1.5 w-full focus:border-blue-600 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">
+              <input type="checkbox" x-model="currentEndpoint.params.public" class="mr-1" />
+              Public
+            </label>
+          </div>
+        </div>
+
+        <!-- ID parameter -->
+        <div x-show="selectedEndpoint === 'get' || selectedEndpoint === 'delete'">
+          <label class="block text-xs text-gray-600 mb-1">Media ID *</label>
+          <input
+            type="text"
+            x-model="currentEndpoint.params.id"
+            placeholder="e.g. u7qyqij"
+            class="text-xs font-mono border border-gray-300 px-3 py-1.5 w-full focus:border-blue-600 focus:outline-none"
+          />
+        </div>
+
+        <!-- List parameters -->
+        <div x-show="selectedEndpoint === 'list'" class="space-y-2">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Limit</label>
+            <input
+              type="number"
+              x-model.number="currentEndpoint.params.limit"
+              min="1"
+              max="100"
+              class="text-xs font-mono border border-gray-300 px-3 py-1.5 w-full focus:border-blue-600 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Cursor (for pagination)</label>
+            <input
+              type="text"
+              x-model="currentEndpoint.params.cursor"
+              placeholder="Leave empty for first page"
+              class="text-xs font-mono border border-gray-300 px-3 py-1.5 w-full focus:border-blue-600 focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Execute Button -->
+      <button
+        @click="executeRequest()"
+        :disabled="requestInProgress"
+        class="w-full py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+      >
+        <span x-show="!requestInProgress">Execute Request</span>
+        <span x-show="requestInProgress">Executing...</span>
+      </button>
+    </div>
+
+    <!-- cURL Command -->
+    <div class="border border-gray-200 p-4 mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-xs font-bold text-gray-700">cURL Command</h3>
+        <button
+          @click="copyToClipboard(curlCommand)"
+          class="text-xs text-gray-500 hover:text-gray-700"
+        >
+          <span x-show="copiedText === curlCommand">✓ Copied</span>
+          <span x-show="copiedText !== curlCommand">Copy</span>
+        </button>
+      </div>
+      <pre class="text-xs font-mono bg-gray-50 p-3 overflow-x-auto"><code x-text="curlCommand"></code></pre>
+    </div>
+
+    <!-- Response -->
+    <div x-show="response" class="border border-gray-200 p-4">
+      <h3 class="text-xs font-bold text-gray-700 mb-2">Response</h3>
+
+      <!-- Response metadata -->
+      <div class="flex items-center gap-4 mb-3 text-xs">
+        <span
+          class="font-mono"
+          :class="response?.success ? 'text-green-600' : 'text-red-600'"
+        >
+          <span x-text="response?.status"></span>
+          <span x-text="response?.success ? 'OK' : 'Error'"></span>
+        </span>
+        <span class="text-gray-500">
+          <span x-text="response?.duration"></span>ms
+        </span>
+        <span class="text-gray-500" x-text="response?.timestamp"></span>
+      </div>
+
+      <!-- Response body -->
+      <div class="bg-gray-50 p-3 overflow-x-auto">
+        <pre class="text-xs font-mono"><code x-text="formatJson(response?.success ? response?.data : {error: response?.error})"></code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Import our shared API package
+  import { ImgAuth, ImgAPI } from '@img-pro/api';
+
+  // Define Alpine component
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('playground', () => ({
+      authenticated: false,
+      user: null,
+      loading: false,
+      tokenInput: '',
+      auth: null,
+      api: null,
+      authUrl: '',
+
+      // API testing state
+      selectedEndpoint: 'upload',
+      endpoints: {
+        upload: {
+          method: 'POST',
+          path: '/v1/upload',
+          description: 'Upload an image to your account',
+          params: {
+            file: null,
+            description: '',
+            public: true,
+          }
+        },
+        list: {
+          method: 'GET',
+          path: '/v1/media',
+          description: 'List all media in your account',
+          params: {
+            limit: 50,
+            cursor: '',
+          }
+        },
+        get: {
+          method: 'GET',
+          path: '/v1/media/{id}',
+          description: 'Get details for a specific media item',
+          params: {
+            id: '',
+          }
+        },
+        delete: {
+          method: 'DELETE',
+          path: '/v1/media/{id}',
+          description: 'Delete a media item',
+          params: {
+            id: '',
+          }
+        }
+      },
+      response: null,
+      requestInProgress: false,
+      copiedText: null,
+
+      async init() {
+        // Initialize auth and API
+        this.auth = new ImgAuth();
+        this.api = new ImgAPI();
+        this.authUrl = this.auth.authUrl;
+
+        // Check if user is authenticated
+        const token = this.auth.getToken();
+        if (token) {
+          this.authenticated = await this.auth.isAuthenticated();
+          if (this.authenticated) {
+            this.user = this.auth.getUser();
+          }
+        }
+      },
+
+      async setToken() {
+        if (!this.tokenInput) return;
+
+        // Save token
+        this.auth.setToken(this.tokenInput);
+
+        // Verify it works
+        this.loading = true;
+        this.authenticated = await this.auth.isAuthenticated();
+
+        if (this.authenticated) {
+          this.user = this.auth.getUser();
+          this.tokenInput = '';
+        } else {
+          alert('Invalid token. Please check and try again.');
+          await this.auth.logout();
+        }
+
+        this.loading = false;
+      },
+
+      get currentEndpoint() {
+        return this.endpoints[this.selectedEndpoint];
+      },
+
+      get requestUrl() {
+        const endpoint = this.currentEndpoint;
+        let path = endpoint.path;
+
+        // Replace path parameters
+        if (path.includes('{id}') && endpoint.params.id) {
+          path = path.replace('{id}', endpoint.params.id);
+        }
+
+        // Add query parameters for GET requests
+        if (endpoint.method === 'GET' && Object.keys(endpoint.params).length > 0) {
+          const queryParams = new URLSearchParams();
+          for (const [key, value] of Object.entries(endpoint.params)) {
+            if (value !== '' && value !== null && key !== 'id') {
+              queryParams.append(key, value);
+            }
+          }
+          const queryString = queryParams.toString();
+          if (queryString) {
+            path += '?' + queryString;
+          }
+        }
+
+        return this.api.baseUrl + path;
+      },
+
+      get curlCommand() {
+        const endpoint = this.currentEndpoint;
+        const token = this.auth.getToken();
+        let cmd = `curl -X ${endpoint.method}`;
+
+        // Add auth header
+        if (token) {
+          cmd += ` \\\n  -H "Authorization: Bearer ${token}"`;
+        }
+
+        // Add endpoint-specific parameters
+        if (endpoint.method === 'POST' && this.selectedEndpoint === 'upload') {
+          if (endpoint.params.file) {
+            cmd += ` \\\n  -F "file=@/path/to/image.jpg"`;
+          }
+          if (endpoint.params.description) {
+            cmd += ` \\\n  -F "description=${endpoint.params.description}"`;
+          }
+          if (endpoint.params.public !== undefined) {
+            cmd += ` \\\n  -F "public=${endpoint.params.public}"`;
+          }
+        }
+
+        cmd += ` \\\n  "${this.requestUrl}"`;
+
+        return cmd;
+      },
+
+      async executeRequest() {
+        this.requestInProgress = true;
+        this.response = null;
+
+        try {
+          const endpoint = this.currentEndpoint;
+          const startTime = Date.now();
+
+          let response;
+          if (this.selectedEndpoint === 'upload' && endpoint.params.file) {
+            response = await this.api.upload(endpoint.params.file, {
+              description: endpoint.params.description,
+              public: endpoint.params.public,
+            });
+          } else if (this.selectedEndpoint === 'list') {
+            response = await this.api.listMedia(endpoint.params);
+          } else if (this.selectedEndpoint === 'get') {
+            response = await this.api.getMedia(endpoint.params.id);
+          } else if (this.selectedEndpoint === 'delete') {
+            response = await this.api.deleteMedia(endpoint.params.id);
+          }
+
+          const endTime = Date.now();
+
+          this.response = {
+            success: true,
+            status: 200,
+            duration: endTime - startTime,
+            data: response,
+            timestamp: new Date().toISOString(),
+          };
+        } catch (error) {
+          this.response = {
+            success: false,
+            status: error.message.includes('401') ? 401 : 500,
+            duration: 0,
+            error: error.message,
+            timestamp: new Date().toISOString(),
+          };
+        } finally {
+          this.requestInProgress = false;
+        }
+      },
+
+      handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+          this.currentEndpoint.params.file = file;
+        }
+      },
+
+      async copyToClipboard(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+          this.copiedText = text;
+          setTimeout(() => {
+            this.copiedText = null;
+          }, 2000);
+        } catch (error) {
+          console.error('Failed to copy:', error);
+        }
+      },
+
+      getMethodColor(method) {
+        const colors = {
+          'GET': 'text-green-600 border-green-500',
+          'POST': 'text-blue-600 border-blue-500',
+          'DELETE': 'text-red-600 border-red-500',
+        };
+        return colors[method] || 'text-gray-600 border-gray-500';
+      },
+
+      formatJson(obj) {
+        return JSON.stringify(obj, null, 2);
+      },
+    }));
+  });
+</script>
