@@ -5,12 +5,12 @@
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
   --bg-tertiary: #f3f4f6;
-  --bg-hover: rgba(0, 0, 0, 0.02);
-  --bg-active: rgba(0, 0, 0, 0.04);
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(0, 0, 0, 0.06);
 
   --text-primary: #1a1a1a;
   --text-secondary: #4a5568;
-  --text-tertiary: #718096;
+  --text-tertiary: #64748b;
   --text-inverse: #ffffff;
 
   --border-primary: #e5e7eb;
@@ -64,12 +64,12 @@
   --bg-primary: #0a0a0a;
   --bg-secondary: #141414;
   --bg-tertiary: #1f1f1f;
-  --bg-hover: rgba(255, 255, 255, 0.04);
-  --bg-active: rgba(255, 255, 255, 0.08);
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
 
   --text-primary: #f0f0f0;
-  --text-secondary: #a0a0a0;
-  --text-tertiary: #707070;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #808080;
   --text-inverse: #0a0a0a;
 
   --border-primary: #2a2a2a;
@@ -87,12 +87,12 @@
     --bg-primary: #0a0a0a;
     --bg-secondary: #141414;
     --bg-tertiary: #1f1f1f;
-    --bg-hover: rgba(255, 255, 255, 0.04);
-    --bg-active: rgba(255, 255, 255, 0.08);
+    --bg-hover: rgba(255, 255, 255, 0.06);
+    --bg-active: rgba(255, 255, 255, 0.1);
 
     --text-primary: #f0f0f0;
-    --text-secondary: #a0a0a0;
-    --text-tertiary: #707070;
+    --text-secondary: #b0b0b0;
+    --text-tertiary: #808080;
     --text-inverse: #0a0a0a;
 
     --border-primary: #2a2a2a;
@@ -248,6 +248,7 @@ body {
   outline: none;
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
 }
 
 .input-sm {
