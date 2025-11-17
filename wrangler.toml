@@ -1,0 +1,7 @@
+# Img.pro Playground - Cloudflare Pages Configuration
+name = "imgpro-play"
+compatibility_date = "2025-11-17"
+
+# Pages assets configuration
+[assets]
+directory = "./dist"
