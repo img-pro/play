@@ -13,13 +13,13 @@
 
       <!-- Right: Actions -->
       <div class="header-right">
-        <button @click="showCommandPalette = true" class="header-btn" title="Search endpoints (⌘K)">
+        <button x-show="activeView !== 'documentation'" @click="showCommandPalette = true" class="header-btn" title="Search endpoints (⌘K)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
         </button>
 
-        <button @click="showHistoryPanel = !showHistoryPanel" class="header-btn" title="History (⌘H)">
+        <button x-show="activeView !== 'documentation'" @click="showHistoryPanel = !showHistoryPanel" class="header-btn" title="History (⌘H)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
             <path d="M3 3v5h5"></path>
@@ -27,24 +27,7 @@
           </svg>
         </button>
 
-        <button @click="toggleTheme" class="header-btn" title="Toggle theme (⌘⇧L)">
-          <svg x-show="currentTheme === 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <svg x-show="currentTheme === 'light'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
-
-        <button @click="activeView = 'documentation'" class="header-btn" :class="{'active': activeView === 'documentation'}" title="Documentation">
+        <button x-show="activeView !== 'documentation'" @click="activeView = 'documentation'" class="header-btn" :class="{'active': activeView === 'documentation'}" title="Documentation">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
@@ -97,7 +80,7 @@
         <!-- Main Content - Split Layout -->
         <div class="endpoint-content-split">
           <template x-if="selectedEndpoint">
-            <div class="split-container">
+            <div class="split-container" :style="`grid-template-columns: ${splitPosition}% 6px ${100 - splitPosition}%`">
               <!-- Left: Request Builder -->
               <div class="split-left">
                 <div class="request-detail">
@@ -409,6 +392,16 @@
                 </div>
               </div>
 
+              <!-- Drag Handle -->
+              <div
+                class="split-drag-handle"
+                @mousedown="startDragging"
+                @touchstart="startDragging"
+                title="Drag to resize"
+              >
+                <div class="drag-handle-line"></div>
+              </div>
+
               <!-- Right: Response Panel (Always Visible) -->
               <div class="split-right">
                 <div x-show="response" class="response-detail">
@@ -465,8 +458,8 @@
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                   </svg>
-                  <h3>Ready to test</h3>
-                  <p>Click <strong>Run</strong> to send the request and see the response here</p>
+                  <h3>No request sent yet</h3>
+                  <p>Fill in any required parameters and click <strong>Run</strong> to send your request</p>
                 </div>
               </div>
             </div>
@@ -476,7 +469,7 @@
           <template x-if="!selectedEndpoint">
             <div class="empty-state">
               <h3>Select an endpoint to get started</h3>
-              <p>Choose from the available endpoints on the left to begin testing the API</p>
+              <p>Choose an endpoint from the sidebar to start testing</p>
             </div>
           </template>
         </div>
@@ -535,7 +528,7 @@
                 <path d="M12 7v5l4 2"></path>
               </svg>
               <p>No requests yet</p>
-              <p class="text-muted">Your request history will appear here</p>
+              <p class="text-muted">Send a request to see it appear here</p>
             </div>
           </div>
         </div>
@@ -581,6 +574,24 @@
     </div>
   </main>
 
+  <!-- Theme Toggle (Bottom Left - Desktop Only) -->
+  <button @click="toggleTheme" class="theme-toggle" title="Toggle theme (⌘⇧L)">
+    <svg x-show="currentTheme === 'dark'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+    <svg x-show="currentTheme === 'light'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+
   <!-- Auth Modal -->
   <div x-show="showAuthModal" x-cloak class="modal" @click.self="showAuthModal = false">
     <div class="modal-content">
@@ -598,7 +609,7 @@
             placeholder="Enter your API token"
             @keyup.enter="saveToken"
           >
-          <p class="help-text">Your token is stored locally and never sent to our servers</p>
+          <p class="help-text">Stored in your browser only - never sent to our servers</p>
         </div>
       </div>
       <div class="modal-footer">
@@ -633,6 +644,10 @@
       },
       splitView: false,
       codeLanguage: 'curl',
+
+      // Split Pane Dragging
+      splitPosition: parseInt(localStorage.getItem('split_position') || '45'),
+      isDragging: false,
 
       // Modals & Panels
       showAuthModal: false,
@@ -691,15 +706,15 @@
               location: 'body',
               required: true,
               placeholder: '',
-              description: 'Image file to upload (max 100 MB)'
+              description: 'Image file (JPG, PNG, GIF, WebP, SVG, HEIC, AVIF - max 70MB)'
             },
             {
               name: 'description',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'My awesome photo',
-              description: 'Description or caption'
+              placeholder: 'Summer vacation photo',
+              description: 'Optional caption or note about this image'
             },
             {
               name: 'tags',
@@ -707,7 +722,7 @@
               location: 'body',
               required: false,
               placeholder: 'vacation,beach,sunset',
-              description: 'Comma-separated tags (max 10)'
+              description: 'Search keywords (max 10, auto-lowercased, duplicates removed)'
             },
             {
               name: 'ttl',
@@ -715,7 +730,7 @@
               location: 'body',
               required: false,
               placeholder: '7d',
-              description: 'Time-to-live: 5m, 2h, 7d (min 5m, max 90d)'
+              description: 'Auto-delete after this period (5m to 90d, e.g., 2h, 7d, 30d)'
             },
             {
               name: 'public',
@@ -723,7 +738,7 @@
               location: 'body',
               required: false,
               placeholder: '1',
-              description: 'Make publicly accessible: 1 or 0'
+              description: 'Access control: 1 = anyone can view, 0 = team only'
             }
           ]
         },
@@ -739,40 +754,40 @@
               type: 'text',
               location: 'body',
               required: true,
-              placeholder: 'https://example.com/image.jpg',
-              description: 'URL of the image to import'
+              placeholder: 'https://example.com/photo.jpg',
+              description: 'Public image URL to fetch (30 second timeout)'
             },
             {
               name: 'description',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'Imported image',
-              description: 'Description or caption'
+              placeholder: 'Imported from website',
+              description: 'Optional caption or note about this image'
             },
             {
               name: 'tags',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'imported,example',
-              description: 'Comma-separated tags'
+              placeholder: 'imported,website',
+              description: 'Search keywords (max 10, auto-lowercased, duplicates removed)'
             },
             {
               name: 'ttl',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: '7d',
-              description: 'Time-to-live'
+              placeholder: '30d',
+              description: 'Auto-delete after this period (5m to 90d, e.g., 2h, 7d, 30d)'
             },
             {
               name: 'public',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'true',
-              description: 'Make publicly accessible'
+              placeholder: '1',
+              description: 'Access control: 1 = anyone can view, 0 = team only'
             }
           ]
         },
@@ -789,7 +804,7 @@
               location: 'query',
               required: false,
               placeholder: '50',
-              description: 'Items per page (max 100)'
+              description: 'Items per page (1-100, defaults to 50)'
             },
             {
               name: 'cursor',
@@ -797,7 +812,7 @@
               location: 'query',
               required: false,
               placeholder: '1704067200_123',
-              description: 'Pagination cursor'
+              description: 'Next page token from previous response (recommended)'
             },
             {
               name: 'offset',
@@ -805,7 +820,7 @@
               location: 'query',
               required: false,
               placeholder: '0',
-              description: 'Offset pagination (deprecated)'
+              description: 'Skip first N items (deprecated - use cursor instead)'
             },
             {
               name: 'ids',
@@ -813,7 +828,7 @@
               location: 'query',
               required: false,
               placeholder: 'abc123,def456',
-              description: 'Fetch specific items'
+              description: 'Fetch only these specific items (comma-separated)'
             },
             {
               name: 'tags',
@@ -821,7 +836,7 @@
               location: 'query',
               required: false,
               placeholder: 'vacation,beach',
-              description: 'Filter by tags'
+              description: 'Filter by tags (combine with tag_mode)'
             },
             {
               name: 'tag_mode',
@@ -829,7 +844,7 @@
               location: 'query',
               required: false,
               placeholder: 'any',
-              description: 'Tag matching: any or all'
+              description: 'Match any tag (OR) or all tags (AND)'
             }
           ]
         },
@@ -847,7 +862,7 @@
               location: 'path',
               required: true,
               placeholder: 'abc123',
-              description: 'Media UID'
+              description: 'Media ID (works without auth if media is public)'
             }
           ]
         },
@@ -855,7 +870,7 @@
           id: 'update-media',
           method: 'PATCH',
           path: '/v1/media/{id}',
-          description: 'Update metadata for a single media item',
+          description: 'Update a single media item',
           requiresAuth: true,
           parameters: [
             {
@@ -864,31 +879,31 @@
               location: 'path',
               required: true,
               placeholder: 'abc123',
-              description: 'Media UID'
-            },
-            {
-              name: 'name',
-              type: 'text',
-              location: 'body',
-              required: false,
-              placeholder: 'updated-filename.jpg',
-              description: 'Update filename'
+              description: 'Media ID to update'
             },
             {
               name: 'description',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'Updated description',
-              description: 'Update description'
+              placeholder: 'Updated caption',
+              description: 'New description (empty string clears it)'
             },
             {
               name: 'tags',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'updated,new-tags',
-              description: 'Update tags (replaces existing)'
+              placeholder: 'nature,landscape',
+              description: 'Tags to add/remove/replace (depends on tag_mode)'
+            },
+            {
+              name: 'tag_mode',
+              type: 'text',
+              location: 'body',
+              required: false,
+              placeholder: 'replace',
+              description: 'How to apply tags: replace (default), add, or remove'
             },
             {
               name: 'public',
@@ -896,7 +911,7 @@
               location: 'body',
               required: false,
               placeholder: 'true',
-              description: 'Update public status'
+              description: 'Change access: true = anyone, false = team only'
             }
           ]
         },
@@ -913,7 +928,7 @@
               location: 'path',
               required: true,
               placeholder: 'abc123',
-              description: 'Media UID to delete'
+              description: 'Media ID to permanently delete'
             }
           ]
         },
@@ -921,7 +936,7 @@
           id: 'batch-update',
           method: 'PATCH',
           path: '/v1/media',
-          description: 'Update multiple media items (max 100)',
+          description: 'Update multiple media items in one request (max 100)',
           requiresAuth: true,
           parameters: [
             {
@@ -930,47 +945,39 @@
               location: 'query',
               required: true,
               placeholder: 'abc123,def456,ghi789',
-              description: 'Comma-separated UIDs (max 100)'
-            },
-            {
-              name: 'name',
-              type: 'text',
-              location: 'body',
-              required: false,
-              placeholder: 'batch-updated.jpg',
-              description: 'Update filename for all'
+              description: 'Media IDs to update (max 100, comma-separated)'
             },
             {
               name: 'description',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'Batch updated',
-              description: 'Update description for all'
+              placeholder: 'Batch updated caption',
+              description: 'Apply this description to all items'
             },
             {
               name: 'tags',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'batch,updated',
-              description: 'Tags to add/remove/replace'
+              placeholder: 'archived,batch',
+              description: 'Tags to apply based on tag_mode'
             },
             {
               name: 'tag_mode',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'replace',
-              description: 'Tag operation: replace, add, remove'
+              placeholder: 'add',
+              description: 'How to apply tags: replace, add, or remove'
             },
             {
               name: 'public',
               type: 'text',
               location: 'body',
               required: false,
-              placeholder: 'true',
-              description: 'Update public status for all'
+              placeholder: 'false',
+              description: 'Change access for all: true = anyone, false = team only'
             }
           ]
         },
@@ -978,7 +985,7 @@
           id: 'batch-delete',
           method: 'DELETE',
           path: '/v1/media',
-          description: 'Delete multiple media items',
+          description: 'Delete multiple media items in one request',
           requiresAuth: true,
           parameters: [
             {
@@ -987,7 +994,7 @@
               location: 'query',
               required: true,
               placeholder: 'abc123,def456,ghi789',
-              description: 'Comma-separated UIDs to delete'
+              description: 'Media IDs to permanently delete (max 100, comma-separated)'
             }
           ]
         }
@@ -1049,13 +1056,32 @@
 
       // Computed properties
       get filteredEndpoints() {
-        if (!this.commandSearch) return this.endpoints;
-        const search = this.commandSearch.toLowerCase();
-        return this.endpoints.filter(ep =>
-          ep.path.toLowerCase().includes(search) ||
-          ep.description.toLowerCase().includes(search) ||
-          ep.method.toLowerCase().includes(search)
-        );
+        // Create endpoint order map based on CRUD groups
+        const endpointOrder = {};
+        this.endpointGroups.forEach((group, groupIndex) => {
+          group.endpoints.forEach((endpointId, endpointIndex) => {
+            endpointOrder[endpointId] = groupIndex * 100 + endpointIndex;
+          });
+        });
+
+        let results = this.endpoints;
+
+        // Filter if search query exists
+        if (this.commandSearch) {
+          const search = this.commandSearch.toLowerCase();
+          results = results.filter(ep =>
+            ep.path.toLowerCase().includes(search) ||
+            ep.description.toLowerCase().includes(search) ||
+            ep.method.toLowerCase().includes(search)
+          );
+        }
+
+        // Sort by CRUD group order (same as navigation)
+        return results.sort((a, b) => {
+          const orderA = endpointOrder[a.id] ?? 999;
+          const orderB = endpointOrder[b.id] ?? 999;
+          return orderA - orderB;
+        });
       },
 
       // Command Palette
@@ -1085,11 +1111,69 @@
           this.isAuthenticated = false;
         }
         this.showAuthModal = false;
+
+        // If in documentation view and token was saved, go to playground
+        if (this.activeView === 'documentation' && this.token) {
+          this.activeView = 'endpoints';
+        }
+
+        // If in playground and token was removed, go to documentation
+        if (this.activeView === 'endpoints' && !this.token) {
+          this.activeView = 'documentation';
+        }
       },
 
       // Theme Management
       toggleTheme() {
         this.$store.theme.toggle();
+      },
+
+      // Split Pane Resizing
+      startDragging(e) {
+        this.isDragging = true;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        // Get the container element once
+        const container = document.querySelector('.split-container');
+        if (!container) {
+          console.error('Split container not found');
+          return;
+        }
+
+        const handleDrag = (dragEvent) => {
+          if (!this.isDragging) return;
+
+          const rect = container.getBoundingClientRect();
+          const clientX = dragEvent.type.includes('touch')
+            ? dragEvent.touches[0].clientX
+            : dragEvent.clientX;
+
+          const newPosition = ((clientX - rect.left) / rect.width) * 100;
+
+          // Constrain between 20% and 80%
+          this.splitPosition = Math.max(20, Math.min(80, newPosition));
+        };
+
+        const stopDragging = () => {
+          if (this.isDragging) {
+            this.isDragging = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            localStorage.setItem('split_position', this.splitPosition.toString());
+          }
+          document.removeEventListener('mousemove', handleDrag);
+          document.removeEventListener('mouseup', stopDragging);
+          document.removeEventListener('touchmove', handleDrag);
+          document.removeEventListener('touchend', stopDragging);
+        };
+
+        document.addEventListener('mousemove', handleDrag);
+        document.addEventListener('mouseup', stopDragging);
+        document.addEventListener('touchmove', handleDrag);
+        document.addEventListener('touchend', stopDragging);
+
+        e.preventDefault();
       },
 
       // Endpoint Mode
@@ -1215,7 +1299,7 @@
           suggestions.push('Your token doesn\'t have permission for this action');
           suggestions.push('Contact your team admin to adjust permissions');
         } else if (status === 404) {
-          suggestions.push('Check if the resource ID/UID is correct');
+          suggestions.push('Check if the resource ID is correct');
           suggestions.push('Verify the endpoint path matches the API documentation');
         } else if (status === 422) {
           suggestions.push('Review the required parameters');
