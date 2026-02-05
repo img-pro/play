@@ -13,7 +13,7 @@ Visit [img.pro](https://img.pro) to create a free account. A new team will be cr
 
 ### 2. Generate an API Token
 
-Once logged in, visit your [API Keys page](https://img.pro/api-keys) to create a new API token. Copy the token immediately - it won't be shown again for security reasons.
+Once logged in, visit your [API Tokens page](https://img.pro/tokens) to create a new API token. Copy the token immediately - it won't be shown again for security reasons.
 
 ### 3. Add Your Token to the Playground
 
@@ -221,7 +221,7 @@ The API is organized into four sections based on CRUD operations:
 - Applies to all authenticated requests
 
 **Storage Quotas:**
-- Based on your team's plan (Free, Launch, Growth, Business)
+- Based on your team's plan (Free, Pro, Scale)
 - Check current usage at [img.pro/billing](https://img.pro/billing)
 - Quota resets monthly
 
@@ -294,13 +294,12 @@ Test any endpoint in the playground to see real response structures!
 
 Uploaded images automatically generate responsive variants optimized for different screen sizes:
 
-| Variant | Max Dimension | Typical Use Case |
-|---------|---------------|------------------|
-| `s` | 640px | Thumbnails, small previews |
-| `m` | 1024px | Mobile device displays |
-| `l` | 1920px | Desktop displays (default) |
-| `xl` | 2560px | Large desktop screens |
-| `xxl` | 3840px | 4K displays, high-DPI |
+| Variant | Short Edge | Typical Use Case |
+|---------|------------|------------------|
+| `s` | 320px | Thumbnails, small previews |
+| `m` | 640px | Mobile device displays |
+| `l` | 1080px | Desktop displays (default) |
+| `o` | Original | Source file, no transform |
 
 **Access Variants:**
 
@@ -390,7 +389,7 @@ Common errors you might encounter and how to resolve them:
 - Never commit tokens to version control
 
 **Token Rotation**
-- Rotate tokens regularly from your [API Keys page](https://img.pro/api-keys)
+- Rotate tokens regularly from your [API Tokens page](https://img.pro/tokens)
 - Revoke compromised tokens immediately
 - Use descriptive names to track token usage
 
@@ -453,7 +452,7 @@ Common errors you might encounter and how to resolve them:
 - **Playground Issues:** [github.com/img-pro/play](https://github.com/img-pro/play) - Report bugs or request features
 
 **Dashboard Links:**
-- **API Keys:** [img.pro/api-keys](https://img.pro/api-keys) - Manage tokens
+- **API Tokens:** [img.pro/tokens](https://img.pro/tokens) - Manage tokens
 - **Usage:** [img.pro/billing](https://img.pro/billing) - Monitor quota
 - **Account:** [img.pro](https://img.pro) - Manage your team
 
